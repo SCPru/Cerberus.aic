@@ -1,7 +1,6 @@
 from core.wikidot import Wikidot
 from core.modules import ModuleLoader
 from core.logger import LOG_LEVELS, log
-from . import __version__
 import config
 
 from prettytable import PrettyTable
@@ -73,7 +72,7 @@ class Bot:
 
     @classmethod
     def get_version(cls):
-        return __version__
+        return cls.config["version"]
 
 
 def modules_data():
