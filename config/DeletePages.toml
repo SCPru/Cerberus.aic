@@ -1,0 +1,25 @@
+category = [ "sandbox",]
+tags = [ "ru", "ru-tale",]
+deletes_tag = "_for_delete"
+time = 86400
+
+[critical]
+rate = -10
+
+[week]
+rate = 0
+days = 7
+
+[post]
+title = "Автоматический административный пост"
+source = "Критический рейтинг набран, статья будет удалена завтра."
+
+[post.easter_eggs]
+# List of easter eggs
+egg1 = "Критический рейтинг набран, статья будет удалена завтра."
+
+[log]
+id = 3838453
+title = "Re: Журнал удалений"
+source = "Удалено по достижении критического рейтинга:\n{}"
+list_template = "* {} ({}/{})"
