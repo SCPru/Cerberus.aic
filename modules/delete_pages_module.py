@@ -11,7 +11,6 @@ import arrow
 
 
 class PageForDelete(BaseModel):
-    """ """
     wiki = peewee.CharField()
     name = peewee.CharField()
     timestamp = peewee.FloatField()

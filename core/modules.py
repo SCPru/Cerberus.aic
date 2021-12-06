@@ -87,14 +87,14 @@ class AbstractModule(ABC):
         self.onStop()
         log.debug(f"Module \"{self.__alias__}\" was stopped")
 
-    def run(self):
+    async def run(self):
         """Run module
         """
-        log.debug(f"Module \"{self.__alias__}\" is running")
-        self.onRun()
+        log.debug(f"Module \"{self.__alias__}\" was launched")
+        await self.onRun()
 
     @abstractmethod
-    def onRun(self):
+    async def onRun(self):
         pass
 
     def onReady(self):

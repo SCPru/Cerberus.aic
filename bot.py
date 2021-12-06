@@ -81,7 +81,7 @@ class Bot:
         try:
             loop.create_task(self.main(list(module_loader.tasks)))
             loop.run_forever()
-        except Exception as ex:
+        except BaseException as ex:
             log.error(ex, exc_info=True)
         finally:
             loop.stop()
