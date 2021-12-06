@@ -1,3 +1,5 @@
+"""Database orm
+"""
 import config
 
 from peewee import SqliteDatabase, Model
@@ -5,6 +7,11 @@ import os
 
 
 def make_file(file: str):
+    """Create empty file by file name
+
+    Args:
+      file (str): File name
+    """
     if not os.path.exists(file):
         with open(file, "w") as f:
             f.write("")

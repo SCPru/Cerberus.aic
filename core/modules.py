@@ -18,18 +18,22 @@ def inject(
 ) -> Union[Any, Callable[[Any], Any]]:
     """Inject value into selected module attribute.
     Note: This function is not safe. It can be used only in plugins for injecting variable into skippy source code.
+
     Args:
         module (str): Module name
-        attr (str): Attribute name
-        value (Optional[Any], optional): Any value or None (if None func return decorator wrapper)
+        attr (str): Module attribute
+        value (Optional[Any]): Value for injecting
+
     Returns:
         Union[Any, Callable[Any]]: If value is not None return value, else return decorator wrapper
     """
 
     def inject(value: Any) -> Any:
         """Inject value into selected module attribute.
+
         Args:
-            value (Any): Any value
+            value (Any): Value for injecting
+
         Returns:
             Any: Input value
         """
@@ -43,6 +47,19 @@ def inject(
 
 
 class AbstractModule(ABC):
+    """Abstract module class
+
+    Attributes:
+        __alias__ (str): Module name
+        __description__ (str): Module description
+        __author__ (str): Module author
+        __version__ (str): Module version
+
+        interval (int): Interval for periodic run
+
+        _wikidot (Wikidot): Wikidot singleton class
+    """
+
     __alias__: str
     __description__: str
     __author__: str
@@ -51,18 +68,33 @@ class AbstractModule(ABC):
     interval: int
 
     def __init__(self):
+        """Initializing module
+        """
         self._wikidot = Wikidot()
 
         self.onReady()
+        log.debug(f"Module \"{self.__alias__}\" was loaded")
 
     def start(self):
+        """Start module
+        """
         self.onStart()
+        log.debug(f"Module \"{self.__alias__}\" was started")
 
     def stop(self):
+        """Stop module
+        """
         self.onStop()
+        log.debug(f"Module \"{self.__alias__}\" was stopped")
+
+    def run(self):
+        """Run module
+        """
+        log.debug(f"Module \"{self.__alias__}\" is running")
+        self.onRun()
 
     @abstractmethod
-    def run(self):
+    def onRun(self):
         pass
 
     def onReady(self):
@@ -81,7 +113,8 @@ class AbstractModule(ABC):
 
 class ModuleLoader:
 
-    """Module loader class"""
+    """Module loader class
+    """
 
     def __init__(self):
         """Init module loader"""
@@ -90,7 +123,8 @@ class ModuleLoader:
     @staticmethod
     def modules() -> List[str]:
         """Get list of all modules
-        Returns:
+
+        Yields:
             List[str]: List of modules
         """
         return [
@@ -103,8 +137,9 @@ class ModuleLoader:
     @classmethod
     def modules_data(cls) -> Iterator[Dict[str, str]]:
         """Get data of all modules
+
         Yields:
-            Dict[str, str]: Dict of module data
+            Dict[str, str]: Module data
         """
         for file in cls.modules():
             module = cls.import_module(file)
@@ -116,35 +151,39 @@ class ModuleLoader:
             }
 
     def load_modules(self):
-        """Load all modules"""
+        """Load all modules
+        """
         for file in self.modules():
             module = self.import_module(file)
             self._modules.append(module)
-            log.debug(f'Module "{module.__alias__}" was loaded')
 
     def start_modules(self):
-        """Start all modules"""
+        """Start all modules
+        """
         for module in self._modules:
             module.start()
-            log.debug(f'Module "{module.__alias__}" was started')
 
     def stop_modules(self):
-        """Stop all modules"""
+        """Stop all modules
+        """
         for module in self._modules:
             module.stop()
-            log.debug(f'Module "{module.__alias__}" was stopped')
 
     @property
     def tasks(self) -> Iterator[Periodic]:
+        """Get periodic tasks
+        """
         for module in self._modules:
             yield Periodic(module.interval, module.run)
 
     @classmethod
     def import_module(cls, module: str) -> AbstractModule:
         """Import module by module name
+
         Args:
             module (str): Module name
+
         Returns:
-            AbstractModule: module instance
+            AbstractModule: Module instance
         """
         return importlib.import_module(module).load()

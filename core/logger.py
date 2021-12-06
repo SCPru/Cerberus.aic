@@ -1,3 +1,5 @@
+"""Logger module
+"""
 import config
 
 import datetime
@@ -10,8 +12,10 @@ LOG_LEVELS = logging._nameToLevel
 
 def get_file_handler() -> logging.FileHandler:
     """Get file handler
+
     Returns:
-        logging.FileHandler: File handler
+      logging.FileHandler: File handler
+
     """
     file_handler = logging.FileHandler(
         os.path.join(
@@ -33,8 +37,10 @@ def get_file_handler() -> logging.FileHandler:
 
 def get_stream_handler() -> logging.StreamHandler:
     """Get stream handler
+
     Returns:
-        logging.StreamHandler: Stream handler
+      logging.StreamHandler: Stream handler
+
     """
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(
@@ -48,8 +54,10 @@ def get_stream_handler() -> logging.StreamHandler:
 
 def get_logger(name: str) -> logging.Logger:
     """Get logger by name
+
     Args:
         name (str): Logger name
+
     Returns:
         logging.Logger: Logger class
     """
@@ -61,4 +69,4 @@ def get_logger(name: str) -> logging.Logger:
     return logger
 
 
-log = get_logger("skippy_bot")
+log = get_logger("Cerberus.aic")

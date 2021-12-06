@@ -11,6 +11,7 @@ import arrow
 
 
 class PageForDelete(BaseModel):
+    """ """
     wiki = peewee.CharField()
     name = peewee.CharField()
     timestamp = peewee.FloatField()
@@ -29,7 +30,7 @@ class DeletePagesModule(AbstractModule):
         if not PageForDelete.table_exists():
             PageForDelete.create_table()
 
-    async def run(self):
+    async def onRun(self):
         await self.find_new_critical_pages()
         await self.delete_pages()
 
@@ -50,7 +51,7 @@ class DeletePagesModule(AbstractModule):
 
             PageForDelete.create(wiki=page._wiki, name=page.name, timestamp=arrow.utcnow().timestamp)
 
-            self.post_comment(page)
+            await self.post_comment(page)
 
     async def delete_pages(self):
         pages = []
@@ -87,8 +88,8 @@ class DeletePagesModule(AbstractModule):
             if (arrow.now() - arrow.get(page.created, "YYYY-MM-DD HH:mm:ss")).days >= self.config["week"]["days"]:
                 yield page
 
-    def post_comment(self, page: Page):
-        sleep(6)
+    async def post_comment(self, page: Page):
+        await sleep(6)
 
         conf = self.config["post"]
         source = conf["source"] if random.random() > 0.25 else conf["easter_eggs"][random.choice(list(conf["easter_eggs"]))]
@@ -96,7 +97,7 @@ class DeletePagesModule(AbstractModule):
             page._thread.new_post(source, conf["title"])
         except RuntimeError as exc:
             if getattr(exc, "message", None) == "try_again":
-                self.post_comment(page)
+                await self.post_comment(page)
 
     async def log_deleted(self, list_page: List[Tuple[str, int, str]]):
         for wiki in self._wikidot.wikis:
