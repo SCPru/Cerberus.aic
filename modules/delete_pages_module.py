@@ -48,7 +48,7 @@ class DeletePagesModule(AbstractModule):
             tags.add(self.config["deletes_tag"])
             page.set_tags(tags)
 
-            PageForDelete.create(wiki=page._wiki, name=page.name, timestamp=arrow.utcnow().timestamp)
+            PageForDelete.create(wiki=page._wiki.wiki, name=page.name, timestamp=arrow.utcnow().timestamp)
 
             await self.post_comment(page)
 
@@ -57,7 +57,8 @@ class DeletePagesModule(AbstractModule):
         for page in PageForDelete.select():
             if arrow.utcnow().timestamp - page.timestamp >= self.config["time"]:
                 try:
-                    wiki = self._wikidot.get_wiki(page.wiki)
+                    print(page.wiki)
+                    wiki = self._wikidot.get_wiki()
                     p = wiki(page.name)
                     pages.append((p.title, p.author, p.rating))
                     p.delete_page()
