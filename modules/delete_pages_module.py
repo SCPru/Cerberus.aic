@@ -22,7 +22,7 @@ class DeletePagesModule(AbstractModule):
     __author__: str = "MrNereof"
     __version__: str = "1.0.0"
 
-    interval = 60
+    interval = 3600
 
     def __init__(self):
         super(DeletePagesModule, self).__init__()
@@ -59,10 +59,13 @@ class DeletePagesModule(AbstractModule):
                 try:
                     wiki = self._wikidot.get_wiki(page.wiki)
                     p = wiki(page.name)
+                    print(p)
                     pages.append((p.title, p.author, p.rating))
                     p.delete_page()
 
                     log.debug(f"Page was deleted: {page.name}")
+                    page.delete_instance()
+                except AttributeError:
                     page.delete_instance()
                 except NotImplementedError:
                     pass
