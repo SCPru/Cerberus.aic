@@ -1,13 +1,13 @@
 """Initialize everything and run the application.
 """
 from core.logger import LOG_LEVELS, log
-from core.wikidot import Wikidot
+from core.wiki import Wiki
 from core.modules import ModuleLoader
 import config
 
 from typing import MutableMapping, List, Any
 from prettytable import PrettyTable
-from periodic import Periodic
+from core.utils import Periodic
 import argparse
 import asyncio
 import sys
@@ -50,16 +50,11 @@ class Bot:
 
     Attributes:
         config (MutableMapping[str, Any]): Bot config
-        _wikidot (Wikidot): Wikidot singleton class
+        _wiki (Wiki): Wiki class
     """
 
     config: MutableMapping[str, Any] = config.load_config("bot")
-
-    def __init__(self):
-        """Initializing Cerberus.aic
-        """
-        self._wikidot: Wikidot = Wikidot(self.config["wikidot"]["wikis"])
-        self._wikidot.auth(os.getenv("CERBERUS_LOGIN"), os.getenv("CERBERUS_PASSWORD"))
+    _wiki: Wiki = Wiki(config.get("site", "https://scpfoundation.net")).auth(os.getenv("CERBERUS_AUTHKEY"))
 
     def run(self) -> int:
         """Run bot and all modules
@@ -71,7 +66,7 @@ class Bot:
         log.info("Initializing \"Cerberus.aic\"")
 
         log.info("Load all modules...")
-        module_loader = ModuleLoader()
+        module_loader = ModuleLoader(self._wiki)
         module_loader.load_modules()
 
         log.info("Start all modules...")
@@ -111,8 +106,8 @@ class Bot:
         """
         return cls.config["version"]
 
-    @staticmethod
-    def modules_data() -> PrettyTable:
+    @classmethod
+    def modules_data(cls) -> PrettyTable:
         """Get modules data in pretty table
 
         Returns:
@@ -122,7 +117,7 @@ class Bot:
         table = PrettyTable()
         table.field_names = ["Alias", "Description", "Author", "Version"]
 
-        for module in ModuleLoader.modules_data():
+        for module in ModuleLoader(cls._wiki).modules_data():
             table.add_row(
                 [
                     module["__alias__"],

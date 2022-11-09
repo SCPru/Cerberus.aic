@@ -1,4 +1,2 @@
-version = "1.0.0"
-
-[wikidot]
-wikis = ["scp-ru",]
+version = "1.1.0"
+site = "http://localhost:8000"

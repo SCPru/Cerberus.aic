@@ -1,7 +1,6 @@
-peewee==2.8.0
+peewee
 prettytable==2.0.0
-asyncio_periodic==2019.2
 arrow==0.17.0
-pyscp==1.1.19
 periodic==2.1.1
 toml==0.10.2
+requests==2.28.1

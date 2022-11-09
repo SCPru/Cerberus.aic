@@ -1,9 +1,9 @@
-from core.wikidot import Thread, Wiki, Page
+from core.wiki import Thread, Wiki, Page
 from core.modules import AbstractModule
 from core.logger import log
 from core.db import BaseModel
 
-from typing import Iterator, Tuple, List
+from typing import Iterator, Dict, Any, List
 from asyncio import sleep
 import random
 import peewee
@@ -22,10 +22,10 @@ class DeletePagesModule(AbstractModule):
     __author__: str = "MrNereof"
     __version__: str = "1.0.0"
 
-    interval = 3600
+    interval = 1
 
-    def __init__(self):
-        super(DeletePagesModule, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(DeletePagesModule, self).__init__(*args, **kwargs)
         if not PageForDelete.table_exists():
             PageForDelete.create_table()
 
@@ -34,21 +34,20 @@ class DeletePagesModule(AbstractModule):
         await self.delete_pages()
 
     async def find_new_critical_pages(self):
-        for wiki in self._wikidot.wikis:
-            for page in self.get_critical_rate_pages(wiki):
-                await self.prepare_page(page)
-            for page in self.get_old_pages(wiki):
-                await self.prepare_page(page)
+        for page in self.get_critical_rate_pages():
+            await self.prepare_page(page)
+        for page in self.get_old_pages():
+            await self.prepare_page(page)
 
     async def prepare_page(self, page: Page):
         if self.validate_page(page):
             log.debug(f"Find page: {page.title}")
 
             tags = page.tags
-            tags.add(self.config["deletes_tag"])
+            tags.append(self.config["deletes_tag"])
             page.set_tags(tags)
 
-            PageForDelete.create(wiki=page._wiki.wiki, name=page.name, timestamp=arrow.utcnow().timestamp)
+            PageForDelete.create(wiki=page.wiki, name=page.name, timestamp=arrow.utcnow().timestamp).save()
 
             await self.post_comment(page)
 
@@ -57,10 +56,8 @@ class DeletePagesModule(AbstractModule):
         for page in PageForDelete.select():
             if arrow.utcnow().timestamp - page.timestamp >= self.config["time"]:
                 try:
-                    wiki = self._wikidot.get_wiki(page.wiki)
-                    p = wiki(page.name)
-                    print(p)
-                    pages.append((p.title, p.author, p.rating))
+                    p = self.wiki.get(page.name)
+                    pages.append({"title": p.title, "rating": p.rating, "user": p.author.username})
                     p.delete_page()
 
                     log.debug(f"Page was deleted: {page.name}")
@@ -74,15 +71,15 @@ class DeletePagesModule(AbstractModule):
         if pages:
             await self.log_deleted(pages)
 
-    def get_critical_rate_pages(self, wiki: Wiki) -> Iterator[Page]:
-        return wiki.list_pages(
+    def get_critical_rate_pages(self) -> List[Page]:
+        return [page for page in self.wiki.list_pages(
             category=" ".join(self.config["category"]),
             tags=f"{' '.join(self.config['tags'])} -{self.config['deletes_tag']}",
-            rating=f"<{self.config['critical']['rate'] + 1}"
-        )
+            rating=f"<={self.config['critical']['rate']}"
+        ) if len(page.votes) >= self.config["critical"]["num"]]
 
-    def get_old_pages(self, wiki: Wiki) -> Iterator[Page]:
-        for page in wiki.list_pages(
+    def get_old_pages(self) -> Iterator[Page]:
+        for page in self.wiki.list_pages(
             category=" ".join(self.config["category"]),
             tags=f"{' '.join(self.config['tags'])} -{self.config['deletes_tag']}",
             rating=f"<{self.config['week']['rate']}"
@@ -96,26 +93,25 @@ class DeletePagesModule(AbstractModule):
         conf = self.config["post"]
         source = conf["source"] if random.random() > 0.25 else conf["easter_eggs"][random.choice(list(conf["easter_eggs"]))]
         try:
-            page._thread.new_post(source, conf["title"])
+            page.thread.new_post(source, conf["title"])
         except RuntimeError as exc:
             if getattr(exc, "message", None) == "try_again":
                 await self.post_comment(page)
 
-    async def log_deleted(self, list_page: List[Tuple[str, int, str]]):
-        for wiki in self._wikidot.wikis:
-            conf = self.config["log"]
+    async def log_deleted(self, list_page: List[Dict[str, Any]]):
+        conf = self.config["log"]
 
-            try:
-                Thread(wiki, conf["id"]).new_post(conf["source"].format("\n".join(
-                    [conf["list_template"].format(*page) for page in
-                     list_page])), conf["title"])
-            except RuntimeError as exc:
-                if getattr(exc, "message", None) == "try_again":
-                    await self.log_deleted(list_page)
+        try:
+            Thread(self.wiki, conf["id"]).new_post(conf["source"].format("\n".join(
+                [conf["list_template"].format(**page) for page in
+                    list_page])), conf["title"])
+        except RuntimeError as exc:
+            if getattr(exc, "message", None) == "try_again":
+                await self.log_deleted(list_page)
 
     def validate_page(self, page: Page) -> bool:
-        return self.config["deletes_tag"] not in self._wikidot.get_wiki(page._wiki.wiki)(page.name).tags
+        return self.config["deletes_tag"] not in self.wiki.get(page.name).tags
 
 
-def load() -> DeletePagesModule:
-    return DeletePagesModule()
+def load(*args, **kwargs) -> DeletePagesModule:
+    return DeletePagesModule(*args, **kwargs)

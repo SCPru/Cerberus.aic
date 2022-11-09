@@ -1,10 +1,10 @@
-from core.wikidot import Wikidot
+from core.utils import Periodic
+from core.wiki import Wiki
 from core.logger import log
 import config
 
 from typing import Iterator, Callable, Optional, Union, Dict, List, Any
 from abc import ABC, abstractmethod
-from periodic import Periodic
 import importlib
 import sys
 import os
@@ -67,10 +67,10 @@ class AbstractModule(ABC):
 
     interval: int
 
-    def __init__(self):
+    def __init__(self, wiki: Wiki):
         """Initializing module
         """
-        self._wikidot = Wikidot()
+        self.wiki = wiki
 
         self.onReady()
         log.debug(f"Module \"{self.__alias__}\" was loaded")
@@ -116,8 +116,9 @@ class ModuleLoader:
     """Module loader class
     """
 
-    def __init__(self):
+    def __init__(self, wiki: Wiki):
         """Init module loader"""
+        self.wiki = wiki
         self._modules: List[AbstractModule] = []
 
     @staticmethod
@@ -134,15 +135,14 @@ class ModuleLoader:
             if file.endswith("_module.py")
         ]
 
-    @classmethod
-    def modules_data(cls) -> Iterator[Dict[str, str]]:
+    def modules_data(self) -> Iterator[Dict[str, str]]:
         """Get data of all modules
 
         Yields:
             Dict[str, str]: Module data
         """
-        for file in cls.modules():
-            module = cls.import_module(file)
+        for file in self.modules():
+            module = self.import_module(file)
             yield {
                 "__alias__": module.__alias__,
                 "__description__": module.__description__,
@@ -174,10 +174,9 @@ class ModuleLoader:
         """Get periodic tasks
         """
         for module in self._modules:
-            yield Periodic(module.interval, module.run)
+            yield Periodic(module.run, module.interval)
 
-    @classmethod
-    def import_module(cls, module: str) -> AbstractModule:
+    def import_module(self, module: str) -> AbstractModule:
         """Import module by module name
 
         Args:
@@ -186,4 +185,4 @@ class ModuleLoader:
         Returns:
             AbstractModule: Module instance
         """
-        return importlib.import_module(module).load()
+        return importlib.import_module(module).load(self.wiki)
