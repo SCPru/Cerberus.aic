@@ -36,8 +36,8 @@ class DeletePagesModule(AbstractModule):
     async def find_new_critical_pages(self):
         for page in self.get_critical_rate_pages():
             await self.prepare_page(page)
-        for page in self.get_old_pages():
-            await self.prepare_page(page)
+        # for page in self.get_old_pages():
+        #     await self.prepare_page(page)
 
     async def prepare_page(self, page: Page):
         if self.validate_page(page):
