@@ -34,7 +34,9 @@ class DeletePagesModule(AbstractModule):
         await self.delete_pages()
 
     async def find_new_critical_pages(self):
+        print(1)
         for page in self.get_critical_rate_pages():
+            print(page)
             await self.prepare_page(page)
         # for page in self.get_old_pages():
         #     await self.prepare_page(page)
@@ -46,7 +48,6 @@ class DeletePagesModule(AbstractModule):
             tags = page.tags
             tags.append(self.config["deletes_tag"])
             page.set_tags(tags)
-
             PageForDelete.create(wiki=page.wiki, name=page.name, timestamp=arrow.utcnow().timestamp).save()
 
             await self.post_comment(page)
@@ -88,8 +89,6 @@ class DeletePagesModule(AbstractModule):
                 yield page
 
     async def post_comment(self, page: Page):
-        await sleep(6)
-
         conf = self.config["post"]
         source = conf["source"] if random.random() > 0.25 else conf["easter_eggs"][random.choice(list(conf["easter_eggs"]))]
         try:
