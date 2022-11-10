@@ -22,7 +22,7 @@ class DeletePagesModule(AbstractModule):
     __author__: str = "MrNereof"
     __version__: str = "1.0.0"
 
-    interval = 10
+    interval = 0
 
     def __init__(self, *args, **kwargs):
         super(DeletePagesModule, self).__init__(*args, **kwargs)
