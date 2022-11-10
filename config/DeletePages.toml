@@ -1,12 +1,11 @@
 category = [ "sandbox",]
 tags = [ "ru", "ru-tale",]
 deletes_tag = "_for_delete"
-#time = 86400
-time = 10
+time = 86400
 
 [critical]
 rate = 2
-num = 0
+num = 8
 
 [week]
 rate = 0
