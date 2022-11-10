@@ -22,7 +22,7 @@ class DeletePagesModule(AbstractModule):
     __author__: str = "MrNereof"
     __version__: str = "1.0.0"
 
-    interval = 300
+    interval = 10
 
     def __init__(self, *args, **kwargs):
         super(DeletePagesModule, self).__init__(*args, **kwargs)
@@ -34,9 +34,7 @@ class DeletePagesModule(AbstractModule):
         await self.delete_pages()
 
     async def find_new_critical_pages(self):
-        print(1)
         for page in self.get_critical_rate_pages():
-            print(page)
             await self.prepare_page(page)
         # for page in self.get_old_pages():
         #     await self.prepare_page(page)
