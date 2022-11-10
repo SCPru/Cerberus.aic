@@ -64,6 +64,7 @@ class Bot:
 
         """
         log.info("Initializing \"Cerberus.aic\"")
+        print(os.getenv("CERBERUS_AUTHKEY"))
 
         log.info("Load all modules...")
         module_loader = ModuleLoader(self._wiki)
