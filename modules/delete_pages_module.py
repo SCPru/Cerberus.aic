@@ -1,19 +1,11 @@
 from core.wiki import Thread, Wiki, Page
 from core.modules import AbstractModule
 from core.logger import log
-from core.db import BaseModel
 
 from typing import Iterator, Dict, Any, List
-from asyncio import sleep
+from datetime import datetime
 import random
-import peewee
 import arrow
-
-
-class PageForDelete(BaseModel):
-    wiki = peewee.CharField()
-    name = peewee.CharField()
-    timestamp = peewee.FloatField()
 
 
 class DeletePagesModule(AbstractModule):
@@ -23,11 +15,6 @@ class DeletePagesModule(AbstractModule):
     __version__: str = "1.0.0"
 
     interval = 0
-
-    def __init__(self, *args, **kwargs):
-        super(DeletePagesModule, self).__init__(*args, **kwargs)
-        if not PageForDelete.table_exists():
-            PageForDelete.create_table()
 
     async def onRun(self):
         await self.find_new_critical_pages()
@@ -46,26 +33,21 @@ class DeletePagesModule(AbstractModule):
             tags = page.tags
             tags.append(self.config["deletes_tag"])
             page.set_tags(tags)
-            PageForDelete.create(wiki=page.wiki, name=page.name, timestamp=arrow.utcnow().timestamp).save()
 
             await self.post_comment(page)
 
+    @staticmethod
+    def _get_date_of_for_delete(page: Page) -> datetime:
+        return [entry for entry in page.history if "_for_delete" in entry.meta.get("added_tags", [])][0].createdAt
+
     async def delete_pages(self):
         pages = []
-        for page in PageForDelete.select():
-            if arrow.utcnow().timestamp - page.timestamp >= self.config["time"]:
-                try:
-                    p = self.wiki.get(page.name)
-                    pages.append({"title": p.title, "rating": p.rating, "user": p.author.username})
-                    p.delete_page()
+        for page in self.wiki.list_pages(tags=self.config["deletes_tag"]):
+            if arrow.utcnow().timestamp - self._get_date_of_for_delete(page).timestamp() >= self.config["time"]:
+                pages.append({"title": page.title, "rating": page.rating, "user": page.author.username})
+                page.delete_page()
 
-                    log.debug(f"Page was deleted: {page.name}")
-                    page.delete_instance()
-                except AttributeError:
-                    page.delete_instance()
-                except NotImplementedError:
-                    pass
-                page.save()
+                log.debug(f"Page was deleted: {page.name}")
 
         if pages:
             await self.log_deleted(pages)

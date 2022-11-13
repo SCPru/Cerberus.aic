@@ -2,7 +2,7 @@
 """
 from __future__ import annotations
 
-from typing import Optional, Any, List
+from typing import Optional, Dict, Any, List
 from functools import cached_property
 from dataclasses import dataclass
 from datetime import datetime
@@ -49,7 +49,7 @@ class LogEntry:
     comment: str
     createdAt: datetime
     type: str
-    meta: Any
+    meta: Dict[str, Any]
 
     @classmethod
     def parse(cls, **kwargs) -> LogEntry:
@@ -203,8 +203,4 @@ class Wiki:
 
 if __name__ == "__main__":
     wiki = Wiki("http://localhost:8000").auth("yLVKk1pdobeUYT6C0cdbAE$JuoG3TRZKcSFZr7WusfPCfRDzWX2XOv8qYHqQ/q8s/Y=")
-    print(wiki.list_pages(
-            category="sandbox",
-            tags=f"ru",
-            rating=f"<=2"
-        ))
+    print()
