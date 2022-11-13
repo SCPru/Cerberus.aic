@@ -42,7 +42,11 @@ class DeletePagesModule(AbstractModule):
 
     async def delete_pages(self):
         pages = []
-        for page in self.wiki.list_pages(tags=self.config["deletes_tag"]):
+        for page in self.wiki.list_pages(
+            category=" ".join(self.config["category"]),
+            tags=self.config['deletes_tag'],
+            rating=f"<={self.config['critical']['rate']}"
+        ):
             if arrow.utcnow().timestamp - self._get_date_of_for_delete(page).timestamp() >= self.config["time"]:
                 pages.append({"title": page.title, "rating": page.rating, "user": page.author.username})
                 page.delete_page()
