@@ -13,7 +13,7 @@ class Periodic:
         if not self.is_started:
             self.is_started = True
             # Start task to call func periodically:
-            self._task = asyncio.ensure_future(self._run())
+            self._task = asyncio.gather(asyncio.sleep(self.time), self.func())
 
     async def stop(self):
         if self.is_started:
@@ -22,8 +22,3 @@ class Periodic:
             self._task.cancel()
             with suppress(asyncio.CancelledError):
                 await self._task
-
-    async def _run(self):
-        while True:
-            await asyncio.sleep(self.time)
-            await self.func()
