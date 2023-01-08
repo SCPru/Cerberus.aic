@@ -1,6 +1,6 @@
 peewee
 prettytable==2.0.0
 arrow==0.17.0
-periodic==2.1.1
+asyncio-periodic
 toml==0.10.2
 requests==2.28.1

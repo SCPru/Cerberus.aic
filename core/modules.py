@@ -1,10 +1,10 @@
-from core.utils import Periodic
 from core.wiki import Wiki
 from core.logger import log
 import config
 
 from typing import Iterator, Callable, Optional, Union, Dict, List, Any
 from abc import ABC, abstractmethod
+from periodic import Periodic
 import importlib
 import sys
 import os
@@ -174,7 +174,7 @@ class ModuleLoader:
         """Get periodic tasks
         """
         for module in self._modules:
-            yield Periodic(module.run, module.interval)
+            yield Periodic(module.interval, module.run)
 
     def import_module(self, module: str) -> AbstractModule:
         """Import module by module name
