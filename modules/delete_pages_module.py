@@ -38,7 +38,10 @@ class DeletePagesModule(AbstractModule):
 
     @staticmethod
     def _get_date_of_for_delete(page: Page) -> datetime:
-        return [entry for entry in page.history if "_for_delete" in entry.meta.get("added_tags", [])][0].createdAt
+        try:
+            return [entry for entry in page.history if "_for_delete" in entry.meta.get("added_tags", [])][0].createdAt
+        except IndexError:
+            return datetime.now()
 
     async def delete_pages(self):
         pages = []
