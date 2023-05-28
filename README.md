@@ -2,4 +2,4 @@
 
 -----
 
-Wikidot bot for Russian SCP Branch.
+Rufoundation bot for Russian SCP Branch.
