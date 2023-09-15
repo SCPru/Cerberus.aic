@@ -110,6 +110,9 @@ class Page:
     def delete_page(self):
         return self._api(Route(self._get_endpoint("ARTICLE"), Method.DELETE))
 
+    def rename(self, new_id: str):
+        return self._update_data({"pageId": new_id})
+
     @cached_property
     def history(self) -> List[LogEntry]:
         entries = self._api(Route(self._get_endpoint("ARTICLE_LOGS")), params={"all": "true"})["entries"]

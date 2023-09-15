@@ -1,23 +1,33 @@
 category = [ "sandbox",]
 tags = [ "филиал:ru", ]
-deletes_tag = "_for_delete"
+deletes_tag = "_default:_к_удалению"
 time = 86400
 
 [critical]
 rate = 2
+num = 8
+
+[month]
+tag = "полигон:_месяц"
+declined_tag = "структура:_отклонено-амс"
 num = 15
 
-[week]
-rate = 0
-days = 7
+[approved]
+popularity = 66
+weeks = 2
+num = 15
+approved_tag = "полигон:к_переносу"
+
+[approved.tags]
+protegano = "событие:протегано"
+for_tags = "полигон:к_тегованию"
 
 [post]
 title = "Автоматический административный пост"
 source = "Критический рейтинг набран, статья будет удалена завтра."
 
 [post.easter_eggs]
-# List of easter eggs
-egg1 = "Критический рейтинг набран, статья будет удалена завтра."
+egg1 = "Критический рейтинг набран, статья будет съедена завтра."
 
 [log]
 id = 3838453
