@@ -15,8 +15,7 @@ class DeletePagesModule(AbstractModule):
     __author__: str = "MrNereof"
     __version__: str = "2.0.0"
 
-    #interval = 900
-    interval = 10
+    interval = 900
 
     async def onRun(self):
         await self.find_new_critical_pages()
@@ -95,6 +94,7 @@ class DeletePagesModule(AbstractModule):
 
     @staticmethod
     def _get_timedelta(page: Page) -> timedelta:
+        print(page.created)
         return arrow.now() - arrow.get(page.created, "YYYY-MM-DD HH:mm:ss")
 
     async def mark_month(self):
