@@ -100,7 +100,7 @@ class DeletePagesModule(AbstractModule):
     async def mark_month(self):
         for page in self.wiki.list_pages(
             category=" ".join(self.config["category"]),
-            tags=self.config['tags']
+            tags=" ".join(self.config['tags'])
         ):
             if self._get_timedelta(page).days // 30:
                 tags = page.tags
