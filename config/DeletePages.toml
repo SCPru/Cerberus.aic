@@ -1,8 +1,7 @@
 category = [ "sandbox",]
 tags = [ "филиал:ru", ]
 deletes_tag = "_default:_к_удалению"
-#time = 86400
-time = 100
+time = 86400
 
 [critical]
 rate = 2
