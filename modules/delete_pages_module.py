@@ -94,7 +94,6 @@ class DeletePagesModule(AbstractModule):
 
     @staticmethod
     def _get_timedelta(page: Page) -> timedelta:
-        log.debug(page.created)
         return arrow.now() - arrow.get(page.created)
 
     async def mark_month(self):
