@@ -15,7 +15,7 @@ class DeletePagesModule(AbstractModule):
     __author__: str = "MrNereof"
     __version__: str = "2.0.0"
 
-    interval = 900
+    interval = 10
 
     async def onRun(self):
         await self.find_new_critical_pages()
