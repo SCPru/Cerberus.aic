@@ -185,6 +185,7 @@ class Wiki:
         )
 
         req = requests.request(route.method.name, self._build_link(route.endpoint), *args, **kwargs)
+        print(req.json())
         req.raise_for_status()
 
         return req.json()
