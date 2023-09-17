@@ -77,6 +77,9 @@ class Page:
     def _api(self, *args, **kwargs) -> Any:
         return self.wiki._api(*args, **kwargs)
 
+    def _module(self, *args, **kwargs) -> Any:
+        return self.wiki._module(*args, **kwargs)
+
     def _get_endpoint(self, name: str) -> str:
         return ENDPOINTS[name].format(self.page_id)
 
@@ -128,15 +131,19 @@ class Page:
 
     @property
     def rating(self) -> float:
-        return self.wiki._module("rate", "get_rating", pageId=self.page_id)["rating"]
+        return self._module("rate", "get_rating", pageId=self.page_id)["rating"]
 
     @property
     def votes(self) -> List[Vote]:
-        return [Vote(**vote) for vote in self.wiki._module("rate", "get_votes", pageId=self.page_id)["votes"]]
+        return [Vote(**vote) for vote in self._module("rate", "get_votes", pageId=self.page_id)["votes"]]
+
+    @property
+    def popularity(self) -> int:
+        return self._module("rate", "get_votes", pageId=self.page_id)["popularity"]
 
     @property
     def thread(self) -> Thread:
-        return Thread(self.wiki, self.wiki._module("forumthread", "for_article", pageId=self.page_id)["threadId"], self)
+        return Thread(self.wiki, self._module("forumthread", "for_article", pageId=self.page_id)["threadId"], self)
 
 
 class Thread:

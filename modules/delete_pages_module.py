@@ -129,10 +129,9 @@ class DeletePagesModule(AbstractModule):
         for page in self.wiki.list_pages(
             category=" ".join(self.config["category"]),
             tags=f"{' '.join(self.config['tags'])} -{conf['approved_tag']}",
-            votes=f">={conf['num']}",
-            popularity=f">={conf['popularity']}"
+            votes=f">={conf['num']}"
         ):
-            if self._get_timedelta(page).days / 7 >= conf["weeks"]:
+            if page.popularity >= conf['popularity'] and self._get_timedelta(page).days / 7 >= conf["weeks"]:
                 tags = page.tags
                 tags.append(conf['approved_tag'])
 
