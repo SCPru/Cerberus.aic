@@ -5,7 +5,7 @@ time = 86400
 
 [critical]
 rate = 2
-num = 8
+num = 15
 
 [month]
 tag = "полигон:_месяц"
