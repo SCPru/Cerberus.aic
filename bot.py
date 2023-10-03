@@ -95,7 +95,7 @@ class Bot:
             tasks (List[Periodic]): List of periodic tasks
         """
         for task in tasks:
-            await task.start()
+            await task.start(0)
 
     @classmethod
     def get_version(cls) -> str:
