@@ -39,9 +39,15 @@ class DeletePagesModule(AbstractModule):
 
             await self.post_comment(page)
 
+    @staticmethod
+    def _normalize_tag(tag: str) -> str:
+        if tag.lower().startswith('_default:'):
+            return tag[9:]
+        return tag
+
     def _get_date_of_for_delete(self, page: Page) -> datetime:
         try:
-            return [entry for entry in page.history if self.config["deletes_tag"] in map(lambda x: x["name"], entry.meta.get("added_tags", []))][0].createdAt
+            return [entry for entry in page.history if self._normalize_tag(self.config["deletes_tag"]) in map(lambda x: x["name"], entry.meta.get("added_tags", []))][0].createdAt
         except IndexError:
             return datetime.now()
 
