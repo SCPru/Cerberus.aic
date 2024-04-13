@@ -27,6 +27,7 @@ class DeletePagesModule(AbstractModule):
         await self.mark_month()
         await self.handle_month_pages()
 
+        await self.handle_rating_gained()
         await self.handle_approved_pages()
 
     async def prepare_page(self, page: Page):
@@ -45,9 +46,9 @@ class DeletePagesModule(AbstractModule):
             return tag[9:]
         return tag
 
-    def _get_date_of_for_delete(self, page: Page) -> datetime:
+    def _get_date_of_tag(self, page: Page, tag: str) -> datetime:
         try:
-            return [entry for entry in page.history if self._normalize_tag(self.config["deletes_tag"]) in map(lambda x: x["name"], entry.meta.get("added_tags", []))][0].createdAt
+            return [entry for entry in page.history if self._normalize_tag(tag) in map(lambda x: x["name"], entry.meta.get("added_tags", []))][0].createdAt
         except IndexError:
             return datetime.now()
 
@@ -58,7 +59,7 @@ class DeletePagesModule(AbstractModule):
             tags=self.config['deletes_tag'],
             rating=f"<={self.config['critical']['rate']}"
         ):
-            if arrow.utcnow().timestamp - self._get_date_of_for_delete(page).timestamp() >= self.config["time"]:
+            if arrow.utcnow().timestamp - self._get_date_of_tag(page, self.config["deletes_tag"]).timestamp() >= self.config["time"]:
                 pages.append({"title": page.title, "rating": page.rating, "user": page.author.username})
                 page.delete_page()
                 log.debug(f"Page was deleted: {page.name}")
@@ -99,15 +100,15 @@ class DeletePagesModule(AbstractModule):
         return self.config["deletes_tag"] not in self.wiki.get(page.name).tags
 
     @staticmethod
-    def _get_timedelta(page: Page) -> timedelta:
-        return arrow.now() - arrow.get(page.created)
+    def _get_timedelta(date) -> timedelta:
+        return arrow.now() - arrow.get(date)
 
     async def mark_month(self):
         for page in self.wiki.list_pages(
             category=" ".join(self.config["category"]),
             tags=" ".join(self.config['tags'])
         ):
-            if self._get_timedelta(page).days // 30:
+            if self._get_timedelta(page.created).days // 30:
                 tags = page.tags
                 tags.append(self.config['month']['tag'])
                 page.set_tags(tags)
@@ -130,14 +131,26 @@ class DeletePagesModule(AbstractModule):
             if exc.response.status_code == 409:
                 await self.delete_page(page, f"{new_name}-2")
 
+    async def handle_rating_gained(self):
+        conf = self.config["approved"]
+        for page in self.wiki.list_pages(
+            category=" ".join(self.config["category"]),
+            tags=f"{' '.join(self.config['tags'])} -{conf['rating_gained_tag']} -{conf['approved_tag']}",
+            votes=f">={conf['num']}"
+        ):
+            if page.popularity >= conf['popularity']:
+                tags = page.tags
+                tags.append(conf['rating_gained_tag'])
+                page.set_tags(tags)
+
     async def handle_approved_pages(self):
         conf = self.config["approved"]
         for page in self.wiki.list_pages(
             category=" ".join(self.config["category"]),
-            tags=f"{' '.join(self.config['tags'])} -{conf['approved_tag']}",
+            tags=f"{' '.join(self.config['tags'])} {conf['rating_gained_tag']} -{conf['approved_tag']}",
             votes=f">={conf['num']}"
         ):
-            if page.popularity >= conf['popularity'] and self._get_timedelta(page).days / 7 >= conf["weeks"]:
+            if page.popularity >= conf['popularity'] and self._get_timedelta(self._get_date_of_tag(page, conf["rating_gained_tag"])).days / 7 >= conf["weeks"]:
                 tags = page.tags
                 tags.append(conf['approved_tag'])
 

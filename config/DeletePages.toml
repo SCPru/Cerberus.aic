@@ -16,6 +16,7 @@ num = 15
 popularity = 66
 weeks = 2
 num = 15
+rating_gained_tag = "полигон:_рейтинг_набран"
 approved_tag = "полигон:к_переносу"
 
 [approved.tags]
