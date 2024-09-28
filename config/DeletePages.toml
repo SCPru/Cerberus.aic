@@ -6,7 +6,7 @@ time = 86400
 
 [critical]
 rate = 2
-num = 15
+num = 8
 
 [month]
 tag = "полигон:_месяц"
@@ -15,8 +15,9 @@ num = 15
 
 [approved]
 popularity = 66
-weeks = 2
+weeks = 1
 num = 15
+rating_gained_tag = "полигон:_рейтинг_набран"
 approved_tag = "полигон:к_переносу"
 
 [approved.tags]
