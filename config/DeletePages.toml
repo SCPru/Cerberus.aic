@@ -1,5 +1,6 @@
 category = [ "sandbox",]
 tags = [ "филиал:ru", ]
+ignored_tag = "полигон:в_работе"
 deletes_tag = "_default:_к_удалению"
 time = 86400
 

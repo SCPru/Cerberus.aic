@@ -69,7 +69,7 @@ class DeletePagesModule(AbstractModule):
     async def handle_critical_rate_pages(self):
         for page in self.wiki.list_pages(
             category=" ".join(self.config["category"]),
-            tags=f"{' '.join(self.config['tags'])} -{self.config['deletes_tag']}",
+            tags=f"{' '.join(self.config['tags'])} -{self.config['deletes_tag']} -{self.config['ignored_tag']}",
             rating=f"<={self.config['critical']['rate']}",
             votes=f">={self.config['critical']['num']}"
         ):

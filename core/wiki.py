@@ -7,6 +7,7 @@ from functools import cached_property
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum, auto
+import inspect
 import requests
 
 
@@ -24,14 +25,22 @@ class Method(Enum):
     DELETE = auto()
 
 
+class APIData:
+    @classmethod
+    def from_dict(cls, parameters):
+        allowed_parameters = inspect.signature(cls).parameters
+        filtered_parameters = {k: v for k, v in parameters.items() if k in allowed_parameters}
+        return cls(**filtered_parameters)
+
+
 @dataclass
-class Route:
+class Route(APIData):
     endpoint: str
     method: Method = Method.GET
 
 
 @dataclass
-class User:
+class User(APIData):
     type: str
     id: int
     avatar: Optional[str]
@@ -43,7 +52,7 @@ class User:
 
 
 @dataclass
-class LogEntry:
+class LogEntry(APIData):
     revNumber: int
     user: User
     comment: str
@@ -52,14 +61,14 @@ class LogEntry:
     meta: Dict[str, Any]
 
     @classmethod
-    def parse(cls, **kwargs) -> LogEntry:
-        kwargs["createdAt"] = datetime.fromisoformat(kwargs["createdAt"])
-        kwargs["user"] = User(**kwargs["user"])
-        return cls(**kwargs)
+    def from_dict(cls, parameters) -> List[LogEntry]:
+        parameters["createdAt"] = datetime.fromisoformat(parameters["createdAt"])
+        parameters["user"] = User.from_dict(parameters["user"])
+        return super().from_dict(parameters)
 
 
 @dataclass
-class Vote:
+class Vote(APIData):
     user: User
     value: float
 
@@ -119,7 +128,7 @@ class Page:
     @cached_property
     def history(self) -> List[LogEntry]:
         entries = self._api(Route(self._get_endpoint("ARTICLE_LOGS")), params={"all": "true"})["entries"]
-        return [LogEntry.parse(**entry) for entry in entries]
+        return [LogEntry.from_dict(entry) for entry in entries]
 
     @property
     def created(self) -> datetime:
@@ -135,7 +144,7 @@ class Page:
 
     @property
     def votes(self) -> List[Vote]:
-        return [Vote(**vote) for vote in self._module("rate", "get_votes", pageId=self.page_id)["votes"]]
+        return [Vote.from_dict(vote) for vote in self._module("rate", "get_votes", pageId=self.page_id)["votes"]]
 
     @property
     def popularity(self) -> int:
