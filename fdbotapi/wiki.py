@@ -293,7 +293,7 @@ class Page:
     async def delete_page(self):
         await self.wiki.api(Endpoint.Article.get_endpoint_route(self.page_id, Method.DELETE))
 
-    async def rename(self, new_id: str, retries: int=10):
+    async def rename(self, new_id: str):
         result = await self.update_data({"pageId": new_id, "forcePageId": True})
         self.page_id = result['pageId']
         return self.page_id

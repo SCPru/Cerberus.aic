@@ -4,25 +4,11 @@ from datetime import datetime, timedelta, timezone
 from fdbotapi.bot import Bot
 from fdbotapi.wiki import Wiki, ForumThread
 from fdbotapi.utils import normalize_tag, include_tags, exclude_tags, now
+
+from logger import get_logger
 from config import *
 
-import logging
-import os
-
-formatter = logging.Formatter("%(asctime)s  [%(levelname)s]  %(message)s")
-
-os.makedirs(LOG_DIR, exist_ok=True)
-fileHandler = logging.FileHandler(os.path.join(LOG_DIR, "work.log"), encoding="utf-8")
-fileHandler.setFormatter(formatter)
-
-consoleHandler = logging.StreamHandler()
-consoleHandler.setFormatter(formatter)
-
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG if DEBUG else logging.INFO)
-logger.addHandler(fileHandler)
-logger.addHandler(consoleHandler)
-
+logger = get_logger()
 
 wiki = Wiki(WIKI_BASE_URL)
 bot = Bot(wiki).auth(API_TOKEN)
