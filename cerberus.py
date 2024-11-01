@@ -56,7 +56,7 @@ async def on_shutdown():
 async def mark_for():
     target_pages = await bot.list_pages(
         category=" ".join(DELETION_CATEGORIES),
-        tags=" ".join(include_tags(DELETION_FILTER_TAGS) + exclude_tags([DELETION_MARK_TAG, WHITE_MARK_TAG, APPROVEMENT_TAG, IN_PROGRESS_TAG])),
+        tags=" ".join(include_tags(DELETION_FILTER_TAGS) + exclude_tags([DELETION_MARK_TAG, WHITE_MARK_TAG, APPROVEMENT_TAG, IN_PROGRESS_TAG, PROTECTION_TAG])),
     )
 
     for page in target_pages:
@@ -96,7 +96,7 @@ async def mark_for():
 async def delete_marked():
     target_pages = await bot.list_pages(
         category=" ".join(DELETION_CATEGORIES),
-        tags=" ".join(include_tags([DELETION_MARK_TAG]) + exclude_tags([IN_PROGRESS_TAG]))
+        tags=" ".join(include_tags([DELETION_MARK_TAG]) + exclude_tags([IN_PROGRESS_TAG, PROTECTION_TAG]))
     )
 
     for page in target_pages:
@@ -125,7 +125,7 @@ async def delete_marked():
 async def approve_marked():
     target_pages = await bot.list_pages(
         category=" ".join(DELETION_CATEGORIES),
-        tags=" ".join(include_tags([WHITE_MARK_TAG]) + exclude_tags([APPROVEMENT_TAG, IN_PROGRESS_TAG])),
+        tags=" ".join(include_tags([WHITE_MARK_TAG]) + exclude_tags([APPROVEMENT_TAG, IN_PROGRESS_TAG, PROTECTION_TAG])),
     )
 
     for page in target_pages:
@@ -149,7 +149,7 @@ async def approve_marked():
 async def handle_in_progress_articles():
     target_pages = await bot.list_pages(
         category=" ".join(DELETION_CATEGORIES),
-        tags=" ".join(include_tags([IN_PROGRESS_TAG])),
+        tags=" ".join(include_tags([IN_PROGRESS_TAG]) + exclude_tags([PROTECTION_TAG])),
     )
 
     unwanted_tags = [APPROVEMENT_TAG, TO_TAGGING_TAG, WHITE_MARK_TAG, DELETION_MARK_TAG]
@@ -159,9 +159,17 @@ async def handle_in_progress_articles():
 
         if now() - page.last_edit >= timedelta(days=IN_PROGRESS_MAX_DAYS):
             prev_name = page.name
+            thread = await page.get_thread()
+            
             await page.rename(f"deleted:{page.name}")
             await page.set_tags({})
+            await thread.new_post(
+                title="Системное уведомление",
+                source="В соответствии с пунктом 1.5 правил публикации, раздел \"Автору\", статья переносится в Удалённые."
+            )
+
             logger.info(f"Статья в работе перенесена в архив удаленных: {prev_name} -> {page}")
+
             continue
 
         for tag in unwanted_tags:

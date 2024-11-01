@@ -25,6 +25,7 @@ TO_TAGGING_TAG = "полигон:к_тегованию"
 WHITE_MARK_TAG = "полигон:_рейтинг_набран"
 DELETION_MARK_TAG = "полигон:_к_удалению"
 IN_PROGRESS_TAG = "полигон:в_работе"
+PROTECTION_TAG = "структура:_защищено"
 
 DELETION_FILTER_TAGS = ["филиал:ru"]
 DELETION_CATEGORIES = ["sandbox"]
