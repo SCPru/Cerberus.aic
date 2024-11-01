@@ -68,6 +68,8 @@ class LogEntryType(Enum):
     New = "new"
     Tags = "tags"
     Name = "name"
+    Source = "source"
+    Revert = "revert"
 
 
 @dataclass
@@ -155,8 +157,14 @@ class Page:
             return None
         return self.history[-1].createdAt
     
-    @cached_property
-    def last_edit(self) -> datetime | None:
+    @property
+    def last_source_edit(self) -> datetime | None:
+        if not self.history:
+            return None
+        return self.filter_history(LogEntryType.Source)[0].createdAt
+    
+    @property
+    def last_modify(self) -> datetime | None:
         if not self.history:
             return None
         return self.history[0].createdAt

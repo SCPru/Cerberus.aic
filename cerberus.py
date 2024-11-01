@@ -157,7 +157,7 @@ async def handle_in_progress_articles():
     for page in target_pages:
         await page.fetch()
 
-        if now() - page.last_edit >= timedelta(days=IN_PROGRESS_MAX_DAYS):
+        if now() - page.last_source_edit >= timedelta(days=IN_PROGRESS_MAX_DAYS):
             prev_name = page.name
             thread = await page.get_thread()
             
