@@ -294,12 +294,9 @@ class Page:
         await self.wiki.api(Endpoint.Article.get_endpoint_route(self.page_id, Method.DELETE))
 
     async def rename(self, new_id: str, retries: int=10):
-        try:
-            await self.update_data({"pageId": new_id})
-            self.page_id = new_id
-        except client_exceptions.ClientResponseError:
-            if retries:
-                await self.rename(f"{new_id}_{random_string(6)}", retries-1)
+        result = await self.update_data({"pageId": new_id, "forcePageId": True})
+        self.page_id = result['pageId']
+        return self.page_id
 
     async def get_thread(self) -> ForumThread:
         return ForumThread(
