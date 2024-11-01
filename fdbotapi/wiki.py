@@ -12,6 +12,7 @@ from yarl import URL
 from .utils import lazy_async, page_category, normalize_tag, random_string
 
 import inspect
+import logging
 
 class APIData:
     @classmethod
@@ -308,6 +309,7 @@ class Wiki:
     def __init__(self, wiki_base: str, token: str=None):
         self.wiki_base = URL(wiki_base)
         self.token = token
+        self._logger = logging.getLogger()
 
     async def api(self, endpoint: Endpoint | Route, *args, **kwargs) -> Any:
         if "headers" not in kwargs:
@@ -317,14 +319,15 @@ class Wiki:
             route = endpoint.value
         else:
             route = endpoint
-        
+
         kwargs["headers"].update({
             "Authorization": f"Bearer {self.token}",
         })
-
-        # print(route, kwargs)
+        
+        self._logger.debug(f"API call to endpoint: {self.wiki_base / "api/" / route.endpoint} with args: {args} and kwargs: {kwargs}")
 
         async with request(route.method.name, self.wiki_base / "api/" / route.endpoint, *args, **kwargs) as resp:
+            # self._logger.debug(resp.request_info)
             resp.raise_for_status()
             return await resp.json()
         

@@ -6,11 +6,12 @@ from typing import Callable, List
 from .wiki import Wiki, Page, Endpoint, Route, Module
 
 import asyncio
-
+import logging
 
 @dataclass
 class Task:
     action: Callable
+    name: str
 
 @dataclass
 class PeriodicTask(Task):
@@ -24,10 +25,13 @@ class Bot:
         self._scheduled_tasks: List[PeriodicTask] = []
         self._ev = asyncio.get_event_loop()
         self.is_running = False
+        self._logger = logging.getLogger()
 
     def run(self):
         if self.is_running:
             return
+        
+        self._logger.debug("Running bot event loop")
         self.is_running = True
         for task in self._on_startup:
             self._ev.create_task(task.action())
@@ -40,6 +44,8 @@ class Bot:
     def stop(self):
         if not self.is_running:
             return
+        
+        self._logger.debug("Stopping bot")
         
         self.is_running = False
 
@@ -62,7 +68,8 @@ class Bot:
             async def wrapper():
                 return await func()
             
-            self._on_startup.append(Task(wrapper))
+            self._on_startup.append(Task(wrapper, func.__name__))
+            self._logger.debug(f"Added new startup task {func.__name__}")
 
             return wrapper
         return decorator
@@ -72,7 +79,8 @@ class Bot:
             async def wrapper():
                 return await func()
             
-            self._on_shutdown.append(Task(wrapper))
+            self._on_shutdown.append(Task(wrapper, func.__name__))
+            self._logger.debug(f"Added new shutdown task {func.__name__}")
             
             return wrapper
         return decorator
@@ -86,8 +94,9 @@ class Bot:
                 return await func()
             
             self._scheduled_tasks.append(
-                PeriodicTask(wrapper, minutes + hours * 60 + days * 1440)
+                PeriodicTask(wrapper, func.__name__, minutes + hours * 60 + days * 1440)
             )
+            self._logger.debug(f"Added new periodic task {func.__name__}")
 
             return wrapper
         return decorator
@@ -99,6 +108,7 @@ class Bot:
             for task in self._scheduled_tasks:
                 if cycles % task.period == 0:
                     self._ev.create_task(task.action())
+                    self._logger.debug(f"Running periodic task {task.name}")
 
             await asyncio.sleep(60)
             cycles += 1

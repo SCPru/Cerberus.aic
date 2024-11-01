@@ -12,14 +12,14 @@ import os
 formatter = logging.Formatter("%(asctime)s  [%(levelname)s]  %(message)s")
 
 os.makedirs(LOG_DIR, exist_ok=True)
-fileHandler = logging.FileHandler(os.path.join(LOG_DIR, "log.txt"), encoding="utf-8")
+fileHandler = logging.FileHandler(os.path.join(LOG_DIR, "work.log"), encoding="utf-8")
 fileHandler.setFormatter(formatter)
 
 consoleHandler = logging.StreamHandler()
 consoleHandler.setFormatter(formatter)
 
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG if DEBUG else logging.INFO)
 logger.addHandler(fileHandler)
 logger.addHandler(consoleHandler)
 
@@ -45,7 +45,7 @@ async def on_startup():
         print(API_TOKEN)
         logger.info(f"Подключаюсь к вики: {wiki.wiki_base}")
     else:
-        logger.critical("Не удалось загрузить токен авторизации")
+        logger.error("Не удалось загрузить токен авторизации")
         bot.stop()
 
 @bot.on_shutdown()
@@ -96,7 +96,7 @@ async def mark_for():
 async def delete_marked():
     target_pages = await bot.list_pages(
         category=" ".join(DELETION_CATEGORIES),
-        tags=" ".join(include_tags(DELETION_MARK_TAG) + exclude_tags(IN_PROGRESS_TAG))
+        tags=" ".join(include_tags([DELETION_MARK_TAG]) + exclude_tags([IN_PROGRESS_TAG]))
     )
 
     for page in target_pages:
@@ -146,7 +146,7 @@ async def approve_marked():
             logger.info(f"Проходной рейтинг утрачен: {page}")
 
 @bot.task(minutes=WORKING_PERIOD_MINUTES)
-async def clear_tags_in_progress():
+async def clear_tags_for_in_progress_articles():
     target_pages = await bot.list_pages(
         category=" ".join(DELETION_CATEGORIES),
         tags=" ".join(include_tags([IN_PROGRESS_TAG])),
