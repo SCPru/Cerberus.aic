@@ -1,6 +1,7 @@
-"""Run Cerberus.aic
-"""
-from bot import start
+from cerberus import bot
 
 if __name__ == "__main__":
-    start()
+    try:
+        bot.run()
+    except KeyboardInterrupt:
+        pass

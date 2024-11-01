@@ -1,1 +1,0 @@
-python3.8 __main__.py --logging_level=DEBUG
