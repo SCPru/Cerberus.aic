@@ -1,5 +1,6 @@
 from typing import Any, List
 from uuid import uuid4
+from datetime import datetime, timezone
 
 def random_string(len: int):
     return "".join(uuid4().hex for _ in range(len // 32 + 1))[:len]
@@ -27,3 +28,6 @@ def include_tags(tags: List[str]):
 
 def exclude_tags(tags: List[str]):
     return list(map(lambda t: f"-{t.replace("+", "").replace("-", "")}", tags))
+
+def now(tz: timezone=timezone.utc) -> datetime:
+    return datetime.now(tz)

@@ -154,6 +154,12 @@ class Page:
         if not self.history:
             return None
         return self.history[-1].createdAt
+    
+    @cached_property
+    def last_edit(self) -> datetime | None:
+        if not self.history:
+            return None
+        return self.history[0].createdAt
 
     @cached_property
     def author(self) -> User | None:

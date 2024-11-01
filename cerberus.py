@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 from fdbotapi.bot import Bot
 from fdbotapi.wiki import Wiki, ForumThread
-from fdbotapi.utils import normalize_tag, include_tags, exclude_tags
+from fdbotapi.utils import normalize_tag, include_tags, exclude_tags, now
 from config import *
 
 import logging
@@ -65,7 +65,7 @@ async def mark_for():
         if page.rating > CRITICAL_RATING and page.popularity < CRITICAL_POPULARITY:
             last_category_move = await page.get_last_category_move()
 
-            if datetime.now(timezone.utc) - last_category_move.createdAt >= timedelta(days=GRAYZONE_DELAY_DAYS):
+            if now() - last_category_move.createdAt >= timedelta(days=GRAYZONE_DELAY_DAYS):
                 prev_name = page.name
                 await page.rename(f"deleted:{page.name}")
                 await page.set_tags({})
@@ -108,7 +108,7 @@ async def delete_marked():
             continue
 
         tag_date = await page.get_tag_date(DELETION_MARK_TAG)
-        if tag_date is None or datetime.now(timezone.utc) - tag_date < timedelta(days=DELETION_DELAY_DAYS):
+        if tag_date is None or now() - tag_date < timedelta(days=DELETION_DELAY_DAYS):
             continue
 
         report_thread = ForumThread(wiki, DELETION_REPORT_TEMPLATE['thread_id'])
@@ -134,7 +134,7 @@ async def approve_marked():
         if page.votes_count > APPROVEMENT_VOTES_COUNT and page.popularity >= CRITICAL_POPULARITY:
             tag_date = await page.get_tag_date(WHITE_MARK_TAG)
 
-            if datetime.now(timezone.utc) - tag_date >= timedelta(days=APPROVEMENT_DELAY_DAYS):
+            if now() - tag_date >= timedelta(days=APPROVEMENT_DELAY_DAYS):
                 await page.update_tags(
                     add_tags=[APPROVEMENT_TAG, TO_TAGGING_TAG],
                     remove_tags=[WHITE_MARK_TAG]
@@ -146,7 +146,7 @@ async def approve_marked():
             logger.info(f"Проходной рейтинг утрачен: {page}")
 
 @bot.task(minutes=WORKING_PERIOD_MINUTES)
-async def clear_tags_for_in_progress_articles():
+async def handle_in_progress_articles():
     target_pages = await bot.list_pages(
         category=" ".join(DELETION_CATEGORIES),
         tags=" ".join(include_tags([IN_PROGRESS_TAG])),
@@ -156,6 +156,13 @@ async def clear_tags_for_in_progress_articles():
 
     for page in target_pages:
         await page.fetch()
+
+        if now() - page.last_edit >= timedelta(days=IN_PROGRESS_MAX_DAYS):
+            prev_name = page.name
+            await page.rename(f"deleted:{page.name}")
+            await page.set_tags({})
+            logger.info(f"Статья в работе перенесена в архив удаленных: {prev_name} -> {page}")
+            continue
 
         for tag in unwanted_tags:
             if normalize_tag(tag) in page.tags:
