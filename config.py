@@ -6,7 +6,7 @@ LOG_DIR = "logs/"
 
 WIKI_BASE_URL = getenv("WIKI_BASE_URL", "https://scpfoundation.net")
 API_TOKEN = getenv("CERBERUS_AUTHKEY")
-DEBUG = bool(loads(getenv("DEBUG", True)))
+DEBUG = bool(loads(getenv("DEBUG", "true")))
 
 WORKING_PERIOD_MINUTES = 15
 
