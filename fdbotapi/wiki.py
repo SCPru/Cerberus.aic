@@ -158,12 +158,6 @@ class Page:
         return self.history[-1].createdAt
     
     @property
-    def last_source_edit(self) -> datetime | None:
-        if not self.history:
-            return None
-        return self.filter_history(LogEntryType.Source)[0].createdAt
-    
-    @property
     def last_modify(self) -> datetime | None:
         if not self.history:
             return None
@@ -199,13 +193,15 @@ class Page:
             return None
         return self._votes_info["popularity"]
     
-    async def filter_history(self, type: Optional[LogEntryType | str]=None, lazy: bool=True) -> List[LogEntry]:
+    async def filter_history(self, types: Optional[List[LogEntryType] | List[str]]=None, lazy: bool=True) -> List[LogEntry]:
         await lazy_async(lazy, self.history is None, self.get_article_log)
 
-        if isinstance(type, LogEntryType):
-            type = type.value
+        if not types:
+            return self.history
 
-        return [entry for entry in self.history if entry.type == type]
+        types = [type.value if isinstance(type, LogEntryType) else type for type in types]
+
+        return [entry for entry in self.history if entry.type in types]
     
     async def _get_raw_data(self) -> Any:
         self._raw_data = await self.wiki.api(Endpoint.Article.get_endpoint_route(self.page_id))
@@ -222,13 +218,20 @@ class Page:
     async def get_last_category_move(self, lazy: bool=True):
         await lazy_async(lazy, self.history is None, self.get_article_log)
 
-        for entry in reversed(await self.filter_history(LogEntryType.Name)):
+        for entry in reversed(await self.filter_history([LogEntryType.Name])):
             new_namecategory = page_category(entry.meta["name"])
             if new_namecategory == page_category(self.name) and \
                new_namecategory != page_category(entry.meta["prev_name"]):
                 return entry
             
         return self.history[-1]
+    
+    async def get_last_source_edit(self) -> datetime | None:
+        if not self.history:
+            return None
+        edits = await self.filter_history([LogEntryType.Source, LogEntryType.New])
+        self.wiki._logger.debug(edits)
+        return edits[0].createdAt
     
     async def get_tag_date(self, tag: str, lazy: bool=True) -> datetime | None:
         await lazy_async(lazy, self.tags is None, self._get_raw_data)
@@ -238,7 +241,7 @@ class Page:
         if normalized_tag not in self.tags:
             return None
         
-        for entry in reversed(await self.filter_history(LogEntryType.Tags)):
+        for entry in reversed(await self.filter_history([LogEntryType.Tags])):
             if normalized_tag in [tag_entry["name"] for tag_entry in entry.meta["added_tags"]]:
                 return entry.createdAt
             
