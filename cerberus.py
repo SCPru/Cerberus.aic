@@ -1,8 +1,9 @@
 from random import random, choice
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
+from typing import List
 
 from fdbotapi.bot import Bot
-from fdbotapi.wiki import Wiki, ForumThread
+from fdbotapi.wiki import Wiki, ForumThread, Page
 from fdbotapi.utils import normalize_tag, include_tags, exclude_tags, now
 
 from logger import get_logger
@@ -85,6 +86,9 @@ async def delete_marked():
         tags=" ".join(include_tags([DELETION_MARK_TAG]) + exclude_tags([IN_PROGRESS_TAG, PROTECTION_TAG]))
     )
 
+    report_thread = ForumThread(wiki, DELETION_REPORT_TEMPLATE['thread_id'])
+    deleted_pages: List[Page] = []
+
     for page in target_pages:
         await page.fetch()
 
@@ -97,15 +101,23 @@ async def delete_marked():
         if tag_date is None or now() - tag_date < timedelta(days=DELETION_DELAY_DAYS):
             continue
 
-        report_thread = ForumThread(wiki, DELETION_REPORT_TEMPLATE['thread_id'])
-
         await page.delete_page()
-        await report_thread.new_post(
-            title=DELETION_REPORT_TEMPLATE["title"],
-            source=DELETION_REPORT_TEMPLATE['source'] \
-            .format(title=page.title, rating=page.rating, votes=page.votes_count, popularity=page.popularity, author=page.author.username)
-        )
+        deleted_pages.append(page)
+
         logger.info(f"Страница удалена безвозвратно: {page}")
+
+    deletion_message = \
+        DELETION_REPORT_TEMPLATE['prepend'] + "\n" + \
+        "\n".join([
+            DELETION_REPORT_TEMPLATE['line'] \
+            .format(title=page.title, rating=page.rating, votes=page.votes_count, popularity=page.popularity, author=page.author.username, tags=", ".join(page.tags))
+            for page in deleted_pages
+        ])
+
+    await report_thread.new_post(
+        title=DELETION_REPORT_TEMPLATE["title"],
+        source=deletion_message
+    )
 
 @bot.task(minutes=WORKING_PERIOD_MINUTES)
 async def approve_marked():

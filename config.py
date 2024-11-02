@@ -33,7 +33,8 @@ DELETION_CATEGORIES = ["sandbox"]
 DELETION_REPORT_TEMPLATE = {
     "thread_id": 3838453,
     "title": "Re: Журнал удалений",
-    "source": "Удалено по достижении критического рейтинга:\n\n* {title} - {rating} ({votes}) / {popularity}%\n* Автор: [[user {author}]]"
+    "prepend": "Удалено по достижении критического рейтинга:",
+    "line": "* {title} - {rating} ({votes}) / {popularity}% _\n Автор: [[user {author}]] _\n Теги: {tags}"
 }
 
 COMMON_DELETION_PHRASES = [
