@@ -31,3 +31,6 @@ def exclude_tags(tags: List[str]):
 
 def now(tz: timezone=timezone.utc) -> datetime:
     return datetime.now(tz)
+
+def never(tz: timezone=timezone.utc) -> datetime:
+    return datetime(year=1, month=1, day=1, tzinfo=tz)

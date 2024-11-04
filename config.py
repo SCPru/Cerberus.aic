@@ -4,11 +4,11 @@ from json import loads
 VERSION = "2.0.0"
 LOG_DIR = "logs/"
 
-WIKI_BASE_URL = getenv("WIKI_BASE_URL", "https://scpfoundation.net")
+WIKI_BASE_URL = getenv("WIKI_BASE_URL", "https://scpfoundation.net/")
 API_TOKEN = getenv("CERBERUS_AUTHKEY")
 DEBUG = bool(loads(getenv("DEBUG", "false")))
 
-WORKING_PERIOD_MINUTES = 15
+WORKING_PERIOD_MINUTES = 10
 
 CRITICAL_RATING = 2.0
 CRITICAL_VOTES_COUNT = 8
@@ -27,8 +27,12 @@ DELETION_MARK_TAG = "полигон:_к_удалению"
 IN_PROGRESS_TAG = "полигон:в_работе"
 PROTECTION_TAG = "структура:_защищено"
 
-DELETION_FILTER_TAGS = ["филиал:ru"]
+DELETION_BRANCH_TAGS = ["филиал:ru"]
 DELETION_CATEGORIES = ["sandbox"]
+
+SYSTEM_MESSAGE_TITLE = "Системное уведомление"
+GRAYZONE_ARCHIVATION_MESSAGE = "Популярность спустя месяц с момента публикации: {popularity}% от {votes}.\nВ соответствии с пунктом 1.4 правил публикации, раздел \"Автору\", статья переносится в Удалённые."
+LONG_IN_PROGRESS_ARCHIVATION_MESSAGE = "В соответствии с пунктом 1.5 правил публикации, раздел \"Автору\", статья переносится в Удалённые."
 
 DELETION_REPORT_TEMPLATE = {
     "thread_id": 3838453,

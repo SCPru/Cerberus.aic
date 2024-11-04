@@ -63,3 +63,4 @@ logs/
 
 /database.db
 prod-cerberus.env
+/test

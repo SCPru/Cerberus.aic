@@ -4,7 +4,8 @@ import os
 from config import *
 
 def get_logger():
-    formatter = logging.Formatter("%(asctime)s  [%(levelname)s]  %(message)s")
+    formatter = logging.Formatter("%(asctime)s  [%(levelname)s]  %(message)s",
+                                  "%d-%m-%Y %H:%M:%S")
 
     os.makedirs(LOG_DIR, exist_ok=True)
     fileHandler = logging.FileHandler(os.path.join(LOG_DIR, "work.log"), encoding="utf-8")

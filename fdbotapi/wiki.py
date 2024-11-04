@@ -5,11 +5,11 @@ from functools import cached_property
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum, auto
-from aiohttp import request, client_exceptions
+from aiohttp import request, ClientSession
 from copy import deepcopy
 from yarl import URL
 
-from .utils import lazy_async, page_category, normalize_tag, random_string
+from .utils import lazy_async, page_category, normalize_tag
 
 import inspect
 import logging
@@ -34,6 +34,7 @@ class Route:
 
 class Endpoint(Enum):
     Modules = Route("modules", Method.POST)
+    Articles = Route("articles")
     Article = Route("articles/{}")
     ArticleLog = Route("articles/{}/log")
 
@@ -93,6 +94,24 @@ class Vote(APIData):
     user: User
     value: float
 
+class VotesMode(Enum):
+    UpDown = "updown"
+    Stars = "stars"
+    Disabled = "disabled"
+
+@dataclass
+class PageMeta:
+    name: str = None
+    title: str = None
+    author: User = None
+    created_at: datetime = None
+    updated_at: datetime = None
+    rating: float = None
+    popularity: int = None
+    votes_count: int = None
+    votes_mode: VotesMode = None
+    tags: List[str] = None
+
 class Page:
     def __init__(self, wiki: Wiki, page_id: str):
         self.wiki = wiki
@@ -101,19 +120,20 @@ class Page:
         self._raw_data = None
         self._article_log = None
         self._votes_info = None
+        self._meta: PageMeta = PageMeta()
 
     def __repr__(self):
         view = f"{self.name}"
-        view += f" ({self.title})" if self._raw_data is not None else ""
-        view += f" {self.rating} ({self.votes_count}) / {self.popularity}%" if self._votes_info is not None else ""
-        view += f" {self.author.username}" if self._article_log is not None else ""
-        view += f" {self.tags}" if self._raw_data is not None else ""
+        view += f" ({self.title})" if self.title is not None else ""
+        view += f" {self.rating if self.rating is not None else "?"} ({self.votes_count if self.votes_count is not None else "?"}) / {self.popularity if self.popularity is not None else "?"}%"
+        view += f" {self.author.username}" if self.author is not None else ""
+        view += f" {self.tags}" if self._meta.tags is not None else ""
 
         return view
 
-    async def fetch(self):
-        await self._get_raw_data()
-        await self.get_article_log()
+    async def fetch(self) -> Page:
+        await self.get_page_data()
+        await self.get_change_log()
         await self.get_votes_info()
 
         return self
@@ -125,25 +145,25 @@ class Page:
 
     @property
     def title(self) -> str | None:
-        if not self._raw_data:
-            return None
-        return self._raw_data["title"]
+        return self._meta.title
 
     @property
     def source(self) -> str | None:
-        if not self._raw_data:
+        if not self._raw_data or "source" not in self._raw_data:
             return None
         return self._raw_data["source"]
 
     @property
     def name(self) -> str:
         return self.page_id
+    
+    @property
+    def category(self) -> str:
+        return page_category(self.page_id)
 
     @property
     def tags(self) -> List[str] | None:
-        if not self._raw_data:
-            return None
-        return self._raw_data["tags"]
+        return self._meta.tags
     
     @property
     def history(self) -> List[LogEntry] | None:
@@ -151,23 +171,17 @@ class Page:
             return None
         return [LogEntry.from_dict(entry) for entry in deepcopy(self._article_log["entries"])]
 
-    @cached_property
+    @property
     def created_at(self) -> datetime | None:
-        if not self.history:
-            return None
-        return self.history[-1].createdAt
+        return self._meta.created_at
     
     @property
-    def last_modify(self) -> datetime | None:
-        if not self.history:
-            return None
-        return self.history[0].createdAt
+    def updated_at(self) -> datetime | None:
+        return self._meta.updated_at
 
     @cached_property
     def author(self) -> User | None:
-        if not self.history:
-            return None
-        return self.history[-1].user
+        return self._meta.author
 
     @property
     def votes(self) -> List[Vote] | None:
@@ -177,24 +191,21 @@ class Page:
     
     @property
     def votes_count(self) -> int | None:
-        if not self._votes_info:
-            return None
-        return len(self.votes)
+        return self._meta.votes_count
     
     @property
     def rating(self) -> float | None:
-        if not self._votes_info:
-            return None
-        return self._votes_info["rating"]
+        return self._meta.rating
 
     @property
     def popularity(self) -> int | None:
-        if not self._votes_info:
-            return None
-        return self._votes_info["popularity"]
+        return self._meta.popularity
+    
+    async def is_exists(self):
+        return await self.wiki.is_page_exists(self.page_id)
     
     async def filter_history(self, types: Optional[List[LogEntryType] | List[str]]=None, lazy: bool=True) -> List[LogEntry]:
-        await lazy_async(lazy, self.history is None, self.get_article_log)
+        await lazy_async(lazy, self.history is None, self.get_change_log)
 
         if not types:
             return self.history
@@ -203,38 +214,47 @@ class Page:
 
         return [entry for entry in self.history if entry.type in types]
     
-    async def _get_raw_data(self) -> Any:
+    async def get_page_data(self) -> Any:
         self._raw_data = await self.wiki.api(Endpoint.Article.get_endpoint_route(self.page_id))
+        self._meta.title = self._raw_data['title']
+        self._meta.tags = self._raw_data["tags"]
         return self._raw_data
     
-    async def get_article_log(self):
+    async def get_change_log(self) -> Any:
         self._article_log = await self.wiki.api(Endpoint.ArticleLog.get_endpoint_route(self.page_id), params={"all": "true"})
+        history = self.history
+
+        self._meta.created_at = history[-1].createdAt
+        self._meta.updated_at = history[0].createdAt
+        self._meta.author = history[-1].user
         return self._article_log
     
-    async def get_votes_info(self):
+    async def get_votes_info(self) -> Any:
         self._votes_info = await self.wiki.module(Module.Rate, "get_votes", pageId=self.page_id)
+        self._meta.rating = self._votes_info["rating"]
+        self._meta.popularity = self._votes_info["popularity"]
+        self._meta.votes_count = len(self._votes_info["votes"])
         return self._votes_info
     
-    async def get_last_category_move(self, lazy: bool=True):
-        await lazy_async(lazy, self.history is None, self.get_article_log)
+    async def get_last_category_move(self, lazy: bool=True) -> LogEntry:
+        await lazy_async(lazy, self.history is None, self.get_change_log)
 
-        for entry in reversed(await self.filter_history([LogEntryType.Name])):
-            new_namecategory = page_category(entry.meta["name"])
-            if new_namecategory == page_category(self.name) and \
-               new_namecategory != page_category(entry.meta["prev_name"]):
+        for entry in await self.filter_history([LogEntryType.Name]):
+            new_category = page_category(entry.meta["name"])
+            prev_category = page_category(entry.meta["prev_name"])
+            if new_category == self.category and new_category != prev_category:
                 return entry
             
         return self.history[-1]
     
-    async def get_last_source_edit(self) -> datetime | None:
-        if not self.history:
-            return None
+    async def get_last_source_edit(self, lazy: bool=True) -> LogEntry | None:
+        await lazy_async(lazy, self.history is None, self.get_change_log)
+
         edits = await self.filter_history([LogEntryType.Source, LogEntryType.New])
-        self.wiki._logger.debug(edits)
-        return edits[0].createdAt
+        return edits[0]
     
     async def get_tag_date(self, tag: str, lazy: bool=True) -> datetime | None:
-        await lazy_async(lazy, self.tags is None, self._get_raw_data)
+        await lazy_async(lazy, self.tags is None, self.get_page_data)
 
         normalized_tag = normalize_tag(tag)
 
@@ -248,17 +268,17 @@ class Page:
         return None
     
     async def set_tags(self, tags: List[str]):
-        await self.update_data({"tags": tags})
+        return await self.update_data({"tags": tags})
     
     async def add_tags(self, tags: List[str], lazy: bool=True):
-        await lazy_async(lazy, self.tags is None, self._get_raw_data)
+        await lazy_async(lazy, self.tags is None, self.get_page_data)
 
         new_tags = self.tags
         new_tags.extend(map(normalize_tag, tags))
-        await self.set_tags(list(set(new_tags)))
+        return await self.set_tags(list(set(new_tags)))
     
     async def remove_tags(self, tags: List[str], lazy: bool=True) -> List[str]:
-        await lazy_async(lazy, self.tags is None, self._get_raw_data)
+        await lazy_async(lazy, self.tags is None, self.get_page_data)
 
         new_tags = self.tags
         removed_tags = []
@@ -272,7 +292,7 @@ class Page:
         return removed_tags
 
     async def update_tags(self, add_tags: List[str]=None, remove_tags: List[str]=None, lazy: bool=True):
-        await lazy_async(lazy, self.tags is None, self._get_raw_data)
+        await lazy_async(lazy, self.tags is None, self.get_page_data)
 
         new_tags = self.tags
         removed_tags = []
@@ -290,10 +310,10 @@ class Page:
         await self.set_tags(new_tags)
         return removed_tags
 
-    async def delete_page(self):
-        await self.wiki.api(Endpoint.Article.get_endpoint_route(self.page_id, Method.DELETE))
+    async def delete_page(self) -> Any:
+        return await self.wiki.api(Endpoint.Article.get_endpoint_route(self.page_id, Method.DELETE))
 
-    async def rename(self, new_id: str):
+    async def rename(self, new_id: str) -> str:
         result = await self.update_data({"pageId": new_id, "forcePageId": True})
         self.page_id = result['pageId']
         return self.page_id
@@ -324,31 +344,63 @@ class Wiki:
         self.wiki_base = URL(wiki_base)
         self.token = token
         self._logger = logging.getLogger()
+        self._session: ClientSession = None
+        self._api_url = URL("/api/")
+        self.is_api_initialized = False
 
-    async def api(self, endpoint: Endpoint | Route, *args, **kwargs) -> Any:
-        if "headers" not in kwargs:
-            kwargs["headers"] = {}
+    async def _init_api(self):
+        self._session = ClientSession(self.wiki_base)
+        self._session.headers.add("Authorization", f"Bearer {self.token}")
+        self.is_api_initialized = True
+
+    async def _close_api(self):
+        await self._session.close()
+
+    async def api(self, endpoint: Endpoint | Route, raw: bool=False, *args, **kwargs) -> Any:
+        if not self.is_api_initialized:
+            await self._init_api()
 
         if isinstance(endpoint, Endpoint) :
             route = endpoint.value
         else:
             route = endpoint
 
-        kwargs["headers"].update({
-            "Authorization": f"Bearer {self.token}",
-        })
+        self._logger.debug(f"API call to endpoint: {self.wiki_base.join(self._api_url) / route.endpoint} with args: {args} and kwargs: {kwargs}")
         
-        self._logger.debug(f"API call to endpoint: {self.wiki_base / "api/" / route.endpoint} with args: {args} and kwargs: {kwargs}")
-
-        async with request(route.method.name, self.wiki_base / "api/" / route.endpoint, *args, **kwargs) as resp:
-            # self._logger.debug(resp.request_info)
-            resp.raise_for_status()
-            return await resp.json()
+        resp = await self._session.request(route.method.name, self._api_url / route.endpoint, *args, **kwargs)
+        if raw:
+            return resp
+        resp.raise_for_status()
+        return await resp.json()
         
     async def get_page(self, page_id: str, lazy: bool=True) -> Page:
         if lazy:
             return Page(self, page_id)
         return await Page(self, page_id).fetch()
+    
+    async def is_page_exists(self, page_id: str):
+        log =  await self.api(Endpoint.ArticleLog.get_endpoint_route(page_id))
+        return log["count"] > 0
+    
+    async def get_all_pages(self):
+        all_pages_json = await self.api(Endpoint.Articles)
+        all_pages = []
+        for page_data in all_pages_json:
+            page = Page(self, page_data["pageId"])
+            page._meta = PageMeta(
+                name=page_data["pageId"],
+                title=page_data["title"],
+                author=User.from_dict(page_data["createdBy"]),
+                created_at=datetime.fromisoformat(page_data["createdAt"]),
+                updated_at=datetime.fromisoformat(page_data["updatedAt"]),
+                rating=page_data["rating"]["value"],
+                popularity=page_data["rating"]["popularity"],
+                votes_count=page_data["rating"]["votes"],
+                votes_mode=VotesMode(page_data["rating"]["mode"]),
+                tags=page_data["tags"]
+            )
+            all_pages.append(page)
+        return all_pages
         
     async def _module(self, name: str, method: str, **kwargs) -> Any:
         data = {"module": name, "method": method}
@@ -363,3 +415,36 @@ class Wiki:
     
     async def list_pages(self, **params) -> List[Page]:
         return [await self.get_page(page_id) for page_id in (await self._raw_list_pages(**params))["pages"]]
+    
+    @staticmethod
+    async def filter_pages(pages: List[Page], categories: str="_default", tags: str="", lazy: bool=True) -> list[Page]:
+        tags_require = set()
+        tags_include = set()
+        tags_exclude = set()
+        filtered_pages = []
+
+        tags_list = tags.split()
+        categories_list= categories.split()
+
+        for tag in tags_list:
+            if tag.startswith("+"):
+                tags_require.add(tag[1:])
+            elif tag.startswith("-"):
+                tags_exclude.add(tag[1:])
+            else:
+                tags_include.add(tag)
+
+        for page in pages:
+            if categories_list and page.category in categories_list:
+                await lazy_async(lazy, page.tags is None, page.get_page_data)
+                page_tags = set(page.tags)
+                if all((tags_require.issubset(page_tags), 
+                       (not tags_exclude.intersection(page_tags)) if tags_exclude else True, 
+                        tags_include.intersection(page_tags) if tags_include else True)):
+                    filtered_pages.append(page)
+
+        return filtered_pages
+    
+    @staticmethod
+    async def only_exists(pages: List[Page]) -> list[Page]:
+        return [page for page in pages if await page.is_exists()]

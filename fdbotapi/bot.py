@@ -33,6 +33,7 @@ class Bot:
         
         self._logger.debug("Running bot event loop")
         self.is_running = True
+
         for task in self._on_startup:
             self._ev.create_task(task.action())
         try:
@@ -46,13 +47,13 @@ class Bot:
             return
         
         self._logger.debug("Stopping bot")
-        
         self.is_running = False
 
         self._scheduler.cancel()
         
         for task in self._on_shutdown:
             self._ev.create_task(task.action())
+        self._ev.create_task(self.wiki._close_api())
 
         self._ev.call_soon(self._ev.stop)
         if not self._ev.is_running():
@@ -124,3 +125,6 @@ class Bot:
     
     async def list_pages(self, **params) -> List[Page]:
         return await self.wiki.list_pages(**params)
+    
+    async def get_all_pages(self) -> List[Page]:
+        return await self.wiki.get_all_pages()
