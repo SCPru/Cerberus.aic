@@ -51,7 +51,7 @@ report:
   line: |
     * {title} - {rating} ({votes}) / {popularity}% _
       Автор: [[user {author}]] _
-      Теги: {tags}"
+      Теги: {tags}
 
 posting:
   title: Системное уведомление

@@ -354,7 +354,8 @@ class Wiki:
         self.is_api_initialized = True
 
     async def _close_api(self):
-        await self._session.close()
+        if self._session:
+            await self._session.close()
 
     async def api(self, endpoint: Endpoint | Route, raw: bool=False, *args, **kwargs) -> Any:
         if not self.is_api_initialized:
