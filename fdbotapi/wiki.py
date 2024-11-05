@@ -5,7 +5,7 @@ from functools import cached_property
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum, auto
-from aiohttp import request, ClientSession
+from aiohttp import ClientSession
 from copy import deepcopy
 from yarl import URL
 

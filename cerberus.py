@@ -7,50 +7,50 @@ from asyncio import Semaphore
 from fdbotapi.bot import Bot
 from fdbotapi.wiki import Wiki, ForumThread, Page
 from fdbotapi.utils import include_tags, exclude_tags, now, never
-from config import *
+from config import config, extract_period, API_TOKEN
 
 logger = get_logger()
 
-wiki = Wiki(WIKI_BASE_URL)
+wiki = Wiki(config["wiki_base_url"])
 bot = Bot(wiki).auth(API_TOKEN)
 
 
 def get_random_deletion_phrase():
     rand = random()
-    avaliable_easter_phrases = [phrase for chance, phrase in EASTER_DELETION_PHRASES if chance >= rand]
+    avaliable_easter_phrases = [phrase["text"] for phrase in config["posting"]["phrases"]["deletion"]["easter"] if phrase["chance"] >= rand]
 
     if avaliable_easter_phrases:
         return choice(avaliable_easter_phrases)
     else:
-        return choice(COMMON_DELETION_PHRASES)
+        return choice(config["posting"]["phrases"]["deletion"]["common"])
     
 async def is_in_grayzone(page: Page) -> bool:
-    if page.rating > CRITICAL_RATING and page.popularity < CRITICAL_POPULARITY:
+    if page.rating > config["critical"]["rating"] and page.popularity < config["critical"]["popularity"]:
         last_category_move = await page.get_last_category_move()
-        if now() - last_category_move.createdAt >= timedelta(days=GRAYZONE_DELAY_DAYS):
+        if now() - last_category_move.createdAt >= extract_period(config["grayzone"]["delay"]):
             return True
     return False
     
 async def is_in_progress_expired(page: Page) -> bool:
-    return now() - (await page.get_last_source_edit()).createdAt >= timedelta(days=IN_PROGRESS_MAX_DAYS)
+    return now() - (await page.get_last_source_edit()).createdAt >= extract_period(config["in_progress"]["delay"])
 
 async def is_last_chance_expired(page: Page) -> bool:
-    tag_date = await page.get_tag_date(DELETION_MARK_TAG)
+    tag_date = await page.get_tag_date(config["tags"]["deletion"])
     if tag_date:
-        return now() - tag_date >= timedelta(days=DELETION_DELAY_DAYS)
+        return now() - tag_date >= extract_period(config["critical"]["delay"])
     return False
 
 def is_critical_rating_reached(page: Page) -> bool:
-    return page.rating < CRITICAL_RATING and page.votes_count >= CRITICAL_VOTES_COUNT
+    return page.rating < config["critical"]["rating"] and page.votes_count >= config["critical"]["votes"]
 
 def is_approvement_rating_reached(page: Page) -> bool:
-    return page.votes_count > APPROVEMENT_VOTES_COUNT and page.popularity >= CRITICAL_POPULARITY
+    return page.votes_count > config["approvement"]["votes"] and page.popularity >= config["approvement"]["popularity"]
 
 async def is_ready_for_approvement(page: Page) -> bool:
     if is_approvement_rating_reached(page):
-        tag_date = await page.get_tag_date(WHITE_MARK_TAG)
+        tag_date = await page.get_tag_date(config["tags"]["whitemark"])
         if tag_date:
-            return now() - tag_date >= timedelta(days=APPROVEMENT_DELAY_DAYS)
+            return now() - tag_date >= extract_period(config["approvement"]["delay"])
         return False
     return False
 
@@ -74,7 +74,7 @@ async def is_ready_for_approvement(page: Page) -> bool:
     
 @bot.on_startup()
 async def on_startup():
-    logger.info(f"Запускаю Cerberus.aic v{VERSION}")
+    logger.info(f"Запускаю {config["name"]} v{config["version"]}")
     if API_TOKEN:
         logger.info("Токен авторизаци успешно загружен")
         logger.info(f"Подключаюсь к вики: {wiki.wiki_base}")
@@ -84,13 +84,13 @@ async def on_startup():
 
 @bot.on_shutdown()
 async def on_shutdown():
-    logger.warning(f"Cerberus.aic v{VERSION} завершает работу")
+    logger.warning(f"Cerberus.aic v{config["version"]} завершает работу")
 
-@bot.task(minutes=WORKING_PERIOD_MINUTES)
+@bot.task(period=extract_period(config["work_period"]))
 async def mark_for():
     target_pages = await bot.list_pages(
-        category=" ".join(DELETION_CATEGORIES),
-        tags=" ".join(include_tags(DELETION_BRANCH_TAGS) + exclude_tags([DELETION_MARK_TAG, WHITE_MARK_TAG, APPROVEMENT_TAG, IN_PROGRESS_TAG, PROTECTION_TAG])),
+        category=" ".join(config["deletion"]["categories"]),
+        tags=" ".join(config["deletion"]["branch_tags"] + exclude_tags([config["tags"]["deletion"], config["tags"]["whitemark"], config["tags"]["approved"], config["tags"]["in_progress"], config["tags"]["protected"]])),
     )
 
     for page in target_pages:
@@ -102,8 +102,8 @@ async def mark_for():
             await page.rename(f"deleted:{page.name}")
             await page.set_tags({})
             await thread.new_post(
-                title=SYSTEM_MESSAGE_TITLE,
-                source=GRAYZONE_ARCHIVATION_MESSAGE \
+                title=config["posting"]["title"],
+                source=config["posting"]["phrases"]["grayzone"] \
                 .format(
                     popularity=page.popularity,
                     votes=page.votes
@@ -112,26 +112,26 @@ async def mark_for():
             logger.info(f"Перенесено в архив удаленных: {prev_name} -> {page}")
 
         elif is_approvement_rating_reached(page):
-            await page.add_tags([WHITE_MARK_TAG])
+            await page.add_tags([config["tags"]["whitemark"]])
             logger.info(f"Проходной рейтинг набран: {page}")
 
         elif  is_critical_rating_reached(page):
-            await page.add_tags([DELETION_MARK_TAG])
+            await page.add_tags([config["tags"]["deletion"]])
             logger.info(f"Помечено для удаления: {page}")
             
             thread = await page.get_thread()
             deletion_phrase = get_random_deletion_phrase()
             await thread.new_post(
-                title=SYSTEM_MESSAGE_TITLE,
+                title=config["posting"]["title"],
                 source=deletion_phrase
             )
             logger.info(f"На странице обсуждения {page.name} оставлено сообщение: {deletion_phrase}")
 
-@bot.task(minutes=WORKING_PERIOD_MINUTES)
+@bot.task(period=extract_period(config["work_period"]))
 async def delete_marked():
     target_pages = await bot.list_pages(
-        category=" ".join(DELETION_CATEGORIES),
-        tags=" ".join(include_tags(DELETION_BRANCH_TAGS + [DELETION_MARK_TAG]) + exclude_tags([IN_PROGRESS_TAG, PROTECTION_TAG]))
+        category=" ".join(config["deletion"]["categories"]),
+        tags=" ".join(config["deletion"]["branch_tags"] + include_tags([config["tags"]["deletion"]]) + exclude_tags([config["tags"]["in_progress"], config["tags"]["protected"]]))
     )
     
     deleted_pages: List[Page] = []
@@ -140,7 +140,7 @@ async def delete_marked():
         await page.fetch()
 
         if not is_critical_rating_reached(page):
-            await page.remove_tags([DELETION_MARK_TAG])
+            await page.remove_tags([config["tags"]["deletion"]])
             logger.info(f"Метка к удалению снята: {page}")
 
         elif await is_last_chance_expired(page):
@@ -149,25 +149,25 @@ async def delete_marked():
             logger.info(f"Страница удалена безвозвратно: {page}")
 
     if deleted_pages:
-        report_thread = ForumThread(wiki, DELETION_REPORT_TEMPLATE['thread_id'])
+        report_thread = ForumThread(wiki, config["report"]["thread"])
         deletion_message = \
-            DELETION_REPORT_TEMPLATE['prepend'] + "\n" + \
+            config["report"]["prepend"] + "\n" + \
             "\n".join([
-                DELETION_REPORT_TEMPLATE['line'] \
+                config["report"]["line"] \
                 .format(title=page.title, rating=page.rating, votes=page.votes_count, popularity=page.popularity, author=page.author.username, tags=", ".join(page.tags))
                 for page in deleted_pages
             ])
 
         await report_thread.new_post(
-            title=DELETION_REPORT_TEMPLATE["title"],
+            title=config["report"]["title"],
             source=deletion_message
         )
 
-@bot.task(minutes=WORKING_PERIOD_MINUTES)
+@bot.task(period=extract_period(config["work_period"]))
 async def approve_marked():
     target_pages = await bot.list_pages(
-        category=" ".join(DELETION_CATEGORIES),
-        tags=" ".join(include_tags(DELETION_BRANCH_TAGS + [WHITE_MARK_TAG]) + exclude_tags([APPROVEMENT_TAG, IN_PROGRESS_TAG, PROTECTION_TAG])),
+        category=" ".join(config["deletion"]["categories"]),
+        tags=" ".join(config["deletion"]["branch_tags"] + include_tags([config["tags"]["whitemark"]]) + exclude_tags([config["tags"]["approved"], config["tags"]["in_progress"], config["tags"]["protected"]])),
     )
 
     for page in target_pages:
@@ -175,22 +175,22 @@ async def approve_marked():
 
         if await is_ready_for_approvement(page):
             await page.update_tags(
-                add_tags=[APPROVEMENT_TAG, TO_TAGGING_TAG],
-                remove_tags=[WHITE_MARK_TAG]
+                add_tags=[config["tags"]["approved"], config["tags"]["tagging"]],
+                remove_tags=[config["tags"]["whitemark"]]
             )
             logger.info(f"Помечено к переносу: {page}")
         else:
-            await page.remove_tags([WHITE_MARK_TAG])
+            await page.remove_tags([config["tags"]["whitemark"]])
             logger.info(f"Проходной рейтинг утрачен: {page}")
 
-@bot.task(minutes=WORKING_PERIOD_MINUTES)
+@bot.task(period=extract_period(config["work_period"]))
 async def handle_in_progress_articles():
     target_pages = await bot.list_pages(
-        category=" ".join(DELETION_CATEGORIES),
-        tags=" ".join(include_tags(DELETION_BRANCH_TAGS + [IN_PROGRESS_TAG]) + exclude_tags([PROTECTION_TAG])),
+        category=" ".join(config["deletion"]["categories"]),
+        tags=" ".join(config["deletion"]["branch_tags"] + include_tags([config["tags"]["in_progress"]]) + exclude_tags([config["tags"]["protected"]])),
     )
 
-    unwanted_tags = {APPROVEMENT_TAG, TO_TAGGING_TAG, WHITE_MARK_TAG, DELETION_MARK_TAG}
+    unwanted_tags = {config["tags"]["approved"], config["tags"]["tagging"], config["tags"]["whitemark"], config["tags"]["deletion"]}
 
     for page in target_pages:
         await page.fetch()
@@ -201,8 +201,8 @@ async def handle_in_progress_articles():
             await page.rename(f"deleted:{page.name}")
             await page.set_tags({})
             await thread.new_post(
-                title=SYSTEM_MESSAGE_TITLE,
-                source=LONG_IN_PROGRESS_ARCHIVATION_MESSAGE
+                title=config["posting"]["title"],
+                source=config["posting"]["phrases"]["too_long_in_progress"]
             )
             logger.info(f"Статья в работе перенесена в архив удаленных: {prev_name} -> {page}")
         else:

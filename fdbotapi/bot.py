@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Callable, List
+from datetime import timedelta
 
 from .wiki import Wiki, Page, Endpoint, Route, Module
 
@@ -86,16 +87,16 @@ class Bot:
             return wrapper
         return decorator
 
-    def task(self, minutes=0, hours=0, days=0):
-        if minutes + hours + days <= 0:
-            raise ValueError("Task delay must be greater than zero.")
+    def task(self, period: timedelta):
+        if period.total_seconds() < 1:
+            raise ValueError("Task period must be at least one second.")
 
         def decorator(func):
             async def wrapper():
                 return await func()
             
             self._scheduled_tasks.append(
-                PeriodicTask(wrapper, func.__name__, minutes + hours * 60 + days * 1440)
+                PeriodicTask(wrapper, func.__name__, int(period.total_seconds()))
             )
             self._logger.debug(f"Added new periodic task {func.__name__}")
 
@@ -111,7 +112,7 @@ class Bot:
                     self._ev.create_task(task.action())
                     self._logger.debug(f"Running periodic task {task.name}")
 
-            await asyncio.sleep(60)
+            await asyncio.sleep(1)
             cycles += 1
     
     async def get_page(self, page_id: str, lazy: bool=True) -> Page:

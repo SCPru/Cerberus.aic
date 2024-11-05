@@ -1,0 +1,75 @@
+name: Cerberus.aic
+version: 2.1.0
+logs_dir: logs/
+wiki_base_url: https://scpfoundation.net
+work_period:
+    minutes: 10
+
+critical:
+  rating: 2.0
+  votes: 8
+  popularity: 66
+  delay:
+    days: 1
+
+approvement:
+  votes: 15
+  popularity: 66
+  delay:
+    weeks: 1
+
+grayzone:
+  delay:
+    days: 30
+
+in_progress:
+  delay:
+    days: 30
+
+deletion:
+  categories:
+    - sandbox
+  branch_tags:
+    - филиал:ru
+
+tags:
+  deletion: полигон:_к_удалению
+  approved: полигон:к_переносу
+  tagging: полигон:к_тегованию
+  whitemark: полигон:_рейтинг_набран
+  in_progress: полигон:в_работе
+  protected: структура:_защищено
+
+report:
+  thread: 3838453
+  title: "Re: Журнал удалений"
+  prepend: "Удалено по достижении критического рейтинга:"
+  line: |
+    * {title} - {rating} ({votes}) / {popularity}% _
+      Автор: [[user {author}]] _
+      Теги: {tags}"
+
+posting:
+  title: Системное уведомление
+  phrases:
+    grayzone: |
+      Популярность спустя месяц с момента публикации: {popularity}% от {votes}.
+      В соответствии с пунктом 1.4 правил публикации, раздел "Автору", статья переносится в Удалённые.
+    too_long_in_progress: |
+      В соответствии с пунктом 1.5 правил публикации, раздел \"Автору\", статья переносится в Удалённые.
+    deletion:
+      common:
+        - Критический рейтинг набран, статья будет удалена завтра.
+      easter:
+        - chance: 0.2
+          text: Критический рейтинг набран, статья будет съедена завтра.
+        - chance: 0.1
+          text: Критический рейтинг набран, статья будет передана в Отдел Удалений в течение суток.
+        - chance: 0.1
+          text: Критический рейтинг набран, статья будет отправлена в пространство между мирами завтра.
+        - chance: 0.1
+          text: Критический рейтинг набран, статья будет удалена из согласованной нормальности завтра.
+        - chance: 0.05
+          text: Критический рейтинг набран, вы ещё можете удалить статью самостоятельно.
+        - chance: 0.01
+          text: Критический рейтинг набран, Чорная Клика санкционирует завтрашнее удаление.
