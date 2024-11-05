@@ -155,7 +155,7 @@ async def delete_marked():
             config["report"]["prepend"] + "\n" + \
             "\n".join([
                 config["report"]["line"] \
-                .format(title=page.title, rating=page.rating, votes=page.votes_count, popularity=page.popularity, author=page.author.username, tags=", ".join(map(lambda t: "**"+t.replace(":", "**:", 1) if ":" in t else t, page.tags)))
+                .format(title=page.title, rating=page.rating, votes=page.votes_count, popularity=page.popularity, author=page.author.username, tags=", ".join(map(lambda t: "**"+t.replace(":", ":**", 1) if ":" in t else t, page.tags)))
                 for page in deleted_pages
             ])
 
