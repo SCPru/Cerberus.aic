@@ -1,4 +1,4 @@
-from random import random, choice
+from random import random, choice, choices
 from datetime import timedelta
 from typing import List
 from logger import get_logger
@@ -17,10 +17,11 @@ bot = Bot(wiki).auth(API_TOKEN)
 
 def get_random_deletion_phrase():
     rand = random()
-    avaliable_easter_phrases = [phrase["text"] for phrase in config["posting"]["phrases"]["deletion"]["easter"] if phrase["chance"] >= rand]
+    avaliable_easter_phrases = [(phrase["weight"], phrase["text"]) for phrase in config["posting"]["phrases"]["deletion"]["easter"] if phrase["weight"] >= rand]
 
     if avaliable_easter_phrases:
-        return choice(avaliable_easter_phrases)
+        weights, easter_phrases = tuple(zip(*avaliable_easter_phrases))
+        return choices(easter_phrases, weights=weights)[0]
     else:
         return choice(config["posting"]["phrases"]["deletion"]["common"])
     
