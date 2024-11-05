@@ -2,8 +2,12 @@ name: Cerberus.aic
 version: 2.1.0
 logs_dir: logs/
 wiki_base_url: https://scpfoundation.net
-work_period:
+
+runtime:
+  work_period:
     minutes: 10
+  deletion_period:
+    hours: 6
 
 critical:
   rating: 2.0

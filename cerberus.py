@@ -87,7 +87,7 @@ async def on_startup():
 async def on_shutdown():
     logger.warning(f"Cerberus.aic v{config["version"]} завершает работу")
 
-@bot.task(period=extract_period(config["work_period"]))
+@bot.task(period=extract_period(config["runtime"]["work_period"]))
 async def mark_for():
     target_pages = await bot.list_pages(
         category=" ".join(config["deletion"]["categories"]),
@@ -128,7 +128,7 @@ async def mark_for():
             )
             logger.info(f"На странице обсуждения {page.name} оставлено сообщение: {deletion_phrase}")
 
-@bot.task(period=extract_period(config["work_period"]))
+@bot.task(period=extract_period(config["runtime"]["deletion_period"]))
 async def delete_marked():
     target_pages = await bot.list_pages(
         category=" ".join(config["deletion"]["categories"]),
@@ -164,7 +164,7 @@ async def delete_marked():
             source=deletion_message
         )
 
-@bot.task(period=extract_period(config["work_period"]))
+@bot.task(period=extract_period(config["runtime"]["work_period"]))
 async def approve_marked():
     target_pages = await bot.list_pages(
         category=" ".join(config["deletion"]["categories"]),
@@ -184,7 +184,7 @@ async def approve_marked():
             await page.remove_tags([config["tags"]["whitemark"]])
             logger.info(f"Проходной рейтинг утрачен: {page}")
 
-@bot.task(period=extract_period(config["work_period"]))
+@bot.task(period=extract_period(config["runtime"]["work_period"]))
 async def handle_in_progress_articles():
     target_pages = await bot.list_pages(
         category=" ".join(config["deletion"]["categories"]),
