@@ -4,4 +4,4 @@ services:
     volumes:
       - "./logs:/app/logs"
     env_file:
-      - prod-cerberus.env
+      - prod.env
