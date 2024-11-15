@@ -110,7 +110,7 @@ async def mark_for():
                 source=config("posting.phrases.grayzone") \
                 .format(
                     popularity=page.popularity,
-                    votes=page.votes
+                    votes=page.votes_count
                 )
             )
             logger.info(f"Перенесено в архив удаленных: {prev_name} -> {page}")
