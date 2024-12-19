@@ -47,14 +47,14 @@ async def is_last_chance_expired(page: Page) -> bool:
 def is_critical_rating_reached(page: Page) -> bool:
     return page.rating < config("critical.rating") and page.votes_count >= config("critical.votes")
 
-def is_approvement_rating_reached(page: Page) -> bool:
-    return page.votes_count > config("approvement.votes") and page.popularity >= config("approvement.popularity")
+def is_approval_rating_reached(page: Page) -> bool:
+    return page.votes_count >= config("approval.votes") and page.popularity >= config("approval.popularity")
 
-async def is_ready_for_approvement(page: Page) -> bool:
-    if is_approvement_rating_reached(page):
+async def is_ready_for_approval(page: Page) -> bool:
+    if is_approval_rating_reached(page):
         tag_date = await page.get_tag_date(config("tags.whitemark"))
         if tag_date:
-            return now() - tag_date >= extract_period(config("approvement.delay"))
+            return now() - tag_date >= extract_period(config("approval.delay"))
         return False
     return False
 
@@ -115,7 +115,7 @@ async def mark_for():
             )
             logger.info(f"Перенесено в архив удаленных: {prev_name} -> {page}")
 
-        elif is_approvement_rating_reached(page):
+        elif is_approval_rating_reached(page):
             await page.add_tags([config("tags.whitemark")])
             logger.info(f"Проходной рейтинг набран: {page}")
 
@@ -177,13 +177,13 @@ async def approve_marked():
     for page in target_pages:
         await page.fetch()
 
-        if await is_ready_for_approvement(page):
+        if await is_ready_for_approval(page):
             await page.update_tags(
                 add_tags=[config("tags.approved"), config("tags.tagging")],
                 remove_tags=[config("tags.whitemark")]
             )
             logger.info(f"Помечено к переносу: {page}")
-        elif not is_approvement_rating_reached(page):
+        elif not is_approval_rating_reached(page):
             await page.remove_tags([config("tags.whitemark")])
             logger.info(f"Проходной рейтинг утрачен: {page}")
 

@@ -16,7 +16,7 @@ critical:
   delay:
     days: 1
 
-approvement:
+approval:
   votes: 15
   popularity: 66
   delay:
