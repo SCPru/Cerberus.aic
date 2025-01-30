@@ -44,6 +44,8 @@ tags:
   in_progress: полигон:в_работе
   protected: структура:_защищено
 
+  ignore_list: []
+
 report:
   thread: 3838453
   title: "Re: Журнал удалений"
