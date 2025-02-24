@@ -261,7 +261,7 @@ class Page:
         if normalized_tag not in self.tags:
             return None
         
-        for entry in reversed(await self.filter_history([LogEntryType.Tags])):
+        for entry in await self.filter_history([LogEntryType.Tags]):
             if normalized_tag in [tag_entry["name"] for tag_entry in entry.meta["added_tags"]]:
                 return entry.createdAt
             

@@ -1,8 +1,8 @@
 from random import random, choice, choices
-from datetime import timedelta
+# from datetime import timedelta
 from typing import List
 from logger import get_logger
-from asyncio import Semaphore
+# from asyncio import Semaphore
 
 from fdbotapi.bot import Bot
 from fdbotapi.wiki import Wiki, ForumThread, Page
