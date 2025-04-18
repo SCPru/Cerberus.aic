@@ -6,9 +6,8 @@ def random_string(len: int):
     return "".join(uuid4().hex for _ in range(len // 32 + 1))[:len]
 
 async def lazy_async(lazy: bool, condition: bool, action: Any):
-    if lazy:
-        if condition:
-            await action()
+    if lazy and condition:
+        await action()
     else:
         await action()
 

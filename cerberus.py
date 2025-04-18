@@ -1,3 +1,4 @@
+from datetime import timedelta
 from random import random, choice, choices
 # from datetime import timedelta
 from typing import List
@@ -8,6 +9,7 @@ from fdbotapi.bot import Bot
 from fdbotapi.wiki import Wiki, ForumThread, Page
 from fdbotapi.utils import include_tags, exclude_tags, now, never
 from config import config, extract_period, API_TOKEN, DEBUG
+
 
 logger = get_logger(
     logs_dir=config("logs_dir"),
@@ -24,9 +26,12 @@ def get_random_deletion_phrase():
 
     if avaliable_easter_phrases:
         weights, easter_phrases = tuple(zip(*avaliable_easter_phrases))
-        return choices(easter_phrases, weights=weights)[0]
+        phrase = choices(easter_phrases, weights=weights)[0]
     else:
-        return choice(config("posting.phrases.deletion.common"))
+        phrase = choice(config("posting.phrases.deletion.common"))
+
+    return phrase.replace("%%next_day%%", (now() + timedelta(days=1)).strftime("%d.%m.%Y"))
+    
     
 async def is_in_grayzone(page: Page) -> bool:
     if page.rating > config("critical.rating") and page.popularity < config("critical.popularity"):
