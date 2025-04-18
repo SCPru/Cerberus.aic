@@ -44,7 +44,9 @@ tags:
   in_progress: полигон:в_работе
   protected: структура:_защищено
 
-  ignore_list: []
+  ignore_list:
+    - конкурс:перепись
+    - конкурс:ремейк
 
 report:
   thread: 3838453
