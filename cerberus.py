@@ -30,7 +30,9 @@ def get_random_deletion_phrase():
     else:
         phrase = choice(config("posting.phrases.deletion.common"))
 
-    return phrase.replace("%%next_day%%", (now() + timedelta(days=1)).strftime("%d.%m.%Y"))
+    return phrase.format(
+        next_day=(now() + timedelta(days=1)).strftime("%d.%m.%Y"),
+    )
     
     
 async def is_in_grayzone(page: Page) -> bool:
