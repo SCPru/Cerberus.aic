@@ -5,9 +5,9 @@ from typing import List
 from logger import get_logger
 # from asyncio import Semaphore
 
-from fdbotapi.bot import Bot
-from fdbotapi.wiki import Wiki, ForumThread, Page
-from fdbotapi.utils import include_tags, exclude_tags, now, never
+from kerb3r.bot import Bot
+from kerb3r.wiki import Wiki, ForumThread, Page
+from kerb3r.utils import include_tags, exclude_tags, now, never
 from config import config, extract_period, API_TOKEN, DEBUG
 
 
@@ -101,7 +101,7 @@ async def on_shutdown():
 async def mark_for():
     target_pages = await bot.list_pages(
         category=" ".join(config("deletion.categories")),
-        tags=" ".join(config("deletion.branch_tags") + exclude_tags([config("tags.deletion"), config("tags.whitemark"), config("tags.approved"), config("tags.in_progress"), config("tags.protected")] + config("tags.ignore_list"))),
+        tags=" ".join(config("deletion.branch_tags") + exclude_tags([config("tags.deletion"), config("tags.whitemark"), config("tags.approved"), config("tags.in_progress")] + config("tags.exclude_with"))),
     )
 
     for page in target_pages:
@@ -142,7 +142,7 @@ async def mark_for():
 async def delete_marked():
     target_pages = await bot.list_pages(
         category=" ".join(config("deletion.categories")),
-        tags=" ".join(config("deletion.branch_tags") + include_tags([config("tags.deletion")]) + exclude_tags([config("tags.in_progress"), config("tags.protected")] + config("tags.ignore_list")))
+        tags=" ".join(config("deletion.branch_tags") + include_tags([config("tags.deletion")]) + exclude_tags([config("tags.in_progress")] + config("tags.exclude_with")))
     )
     
     deleted_pages: List[Page] = []
@@ -178,7 +178,7 @@ async def delete_marked():
 async def approve_marked():
     target_pages = await bot.list_pages(
         category=" ".join(config("deletion.categories")),
-        tags=" ".join(config("deletion.branch_tags") + include_tags([config("tags.whitemark")]) + exclude_tags([config("tags.approved"), config("tags.in_progress"), config("tags.protected")] + config("tags.ignore_list"))),
+        tags=" ".join(config("deletion.branch_tags") + include_tags([config("tags.whitemark")]) + exclude_tags([config("tags.approved"), config("tags.in_progress")] + config("tags.exclude_with"))),
     )
 
     for page in target_pages:
@@ -198,7 +198,7 @@ async def approve_marked():
 async def handle_in_progress_articles():
     target_pages = await bot.list_pages(
         category=" ".join(config("deletion.categories")),
-        tags=" ".join(config("deletion.branch_tags") + include_tags([config("tags.in_progress")]) + exclude_tags([config("tags.protected")] + config("tags.ignore_list"))),
+        tags=" ".join(config("deletion.branch_tags") + include_tags([config("tags.in_progress")]) + exclude_tags(config("tags.exclude_with"))),
     )
 
     unwanted_tags = {config("tags.approved"), config("tags.tagging"), config("tags.whitemark"), config("tags.deletion")}
