@@ -7,7 +7,7 @@ from logger import get_logger
 
 from kerb3r.bot import Bot
 from kerb3r.wiki import Wiki, ForumThread, Page
-from kerb3r.utils import include_tags, exclude_tags, now, never
+from kerb3r.utils import include_tags_or_category, exclude_tags_or_category, now, never
 from config import config, extract_period, API_TOKEN, DEBUG
 
 
@@ -55,7 +55,7 @@ def is_critical_rating_reached(page: Page) -> bool:
     return page.rating < config("critical.rating") and page.votes_count >= config("critical.votes")
 
 def is_approval_rating_reached(page: Page) -> bool:
-    return page.votes_count >= config("approval.votes") and page.popularity >= config("approval.popularity")
+    return page.votes_count >= config("approval.votes") and page.popularity >= config("approval.popularity") and page.rating >= config("approval.rating")
 
 async def is_ready_for_approval(page: Page) -> bool:
     if is_approval_rating_reached(page):
@@ -101,7 +101,7 @@ async def on_shutdown():
 async def mark_for():
     target_pages = await bot.list_pages(
         category=" ".join(config("deletion.categories")),
-        tags=" ".join(config("deletion.branch_tags") + exclude_tags([config("tags.deletion"), config("tags.whitemark"), config("tags.approved"), config("tags.in_progress")] + config("tags.exclude_with"))),
+        tags=" ".join(config("deletion.branch_tags") + exclude_tags_or_category([config("tags.deletion"), config("tags.whitemark"), config("tags.approved")] + config("tags.exclude_with"))),
     )
 
     for page in target_pages:
@@ -142,7 +142,7 @@ async def mark_for():
 async def delete_marked():
     target_pages = await bot.list_pages(
         category=" ".join(config("deletion.categories")),
-        tags=" ".join(config("deletion.branch_tags") + include_tags([config("tags.deletion")]) + exclude_tags([config("tags.in_progress")] + config("tags.exclude_with")))
+        tags=" ".join(config("deletion.branch_tags") + include_tags_or_category([config("tags.deletion")]) + exclude_tags_or_category(config("tags.exclude_with")))
     )
     
     deleted_pages: List[Page] = []
@@ -178,7 +178,7 @@ async def delete_marked():
 async def approve_marked():
     target_pages = await bot.list_pages(
         category=" ".join(config("deletion.categories")),
-        tags=" ".join(config("deletion.branch_tags") + include_tags([config("tags.whitemark")]) + exclude_tags([config("tags.approved"), config("tags.in_progress")] + config("tags.exclude_with"))),
+        tags=" ".join(config("deletion.branch_tags") + include_tags_or_category([config("tags.whitemark")]) + exclude_tags_or_category([config("tags.approved")] + config("tags.exclude_with"))),
     )
 
     for page in target_pages:
@@ -197,8 +197,8 @@ async def approve_marked():
 @bot.task(period=extract_period(config("runtime.work_period")))
 async def handle_in_progress_articles():
     target_pages = await bot.list_pages(
-        category=" ".join(config("deletion.categories")),
-        tags=" ".join(config("deletion.branch_tags") + include_tags([config("tags.in_progress")]) + exclude_tags(config("tags.exclude_with"))),
+        category=" ".join(config("in_progress.categories")),
+        tags=" ".join(config("deletion.branch_tags") + exclude_tags_or_category(config("tags.exclude_with"))),
     )
 
     unwanted_tags = {config("tags.approved"), config("tags.tagging"), config("tags.whitemark"), config("tags.deletion")}
@@ -217,6 +217,6 @@ async def handle_in_progress_articles():
             )
             logger.info(f"Статья в работе перенесена в архив удаленных: {prev_name} -> {page}")
         else:
-            if unwanted_tags.intersection(page.tags):
+            if unwanted_tags.intersection(page.tags or []):
                 removed_tags = await page.remove_tags(unwanted_tags)
                 logger.info(f"Удалены теги полигона для статьи в работе: {page.name} {removed_tags}")

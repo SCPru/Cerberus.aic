@@ -1,5 +1,6 @@
 from os import getenv
 from json import loads
+from typing import Any
 from yaml import safe_load
 from dotenv import load_dotenv
 from datetime import timedelta
@@ -22,7 +23,7 @@ def extract_period(param) -> timedelta:
         weeks=param.get("weeks", 0)
     )
 
-def config(param: str, default=None):
+def config(param: str, default=None) -> Any:
     params = param.split(".")
     current_layer = _config
 

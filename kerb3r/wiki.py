@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Dict, Any, List
+from typing import Iterable, Optional, Dict, Any, List
 from functools import cached_property
 from dataclasses import dataclass
 from datetime import datetime
@@ -9,7 +9,7 @@ from aiohttp import ClientSession
 from copy import deepcopy
 from yarl import URL
 
-from .utils import lazy_async, page_category, normalize_tag
+from .utils import lazy_async, never, page_category, normalize_tag
 
 import inspect
 import logging
@@ -38,7 +38,7 @@ class Endpoint(Enum):
     Article = Route("articles/{}")
     ArticleLog = Route("articles/{}/log")
 
-    def get_endpoint_route(self, page_id: str, method: Method=None):
+    def get_endpoint_route(self, page_id: str, method: Optional[Method]=None):
         route = deepcopy(self.value)
         if method:
             route.method = method
@@ -63,6 +63,8 @@ class User(APIData):
     username: str
     staff: bool
     admin: bool
+
+SYSTEM_USER = User("system", -1, None, False, "System", "System", True, True)
 
 
 class LogEntryType(Enum):
@@ -101,16 +103,16 @@ class VotesMode(Enum):
 
 @dataclass
 class PageMeta:
-    name: str = None
-    title: str = None
-    author: User = None
-    created_at: datetime = None
-    updated_at: datetime = None
-    rating: float = None
-    popularity: int = None
-    votes_count: int = None
-    votes_mode: VotesMode = None
-    tags: List[str] = None
+    name: Optional[str] = None
+    title: Optional[str] = None
+    author: Optional[User] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    rating: Optional[float] = None
+    popularity: Optional[int] = None
+    votes_count: Optional[int] = None
+    votes_mode: Optional[VotesMode] = None
+    tags: Optional[List[str]] = None
 
 class Page:
     def __init__(self, wiki: Wiki, page_id: str):
@@ -162,44 +164,44 @@ class Page:
         return page_category(self.page_id)
 
     @property
-    def tags(self) -> List[str] | None:
-        return self._meta.tags
+    def tags(self) -> List[str]:
+        return self._meta.tags or []
     
     @property
-    def history(self) -> List[LogEntry] | None:
+    def history(self) -> List[LogEntry]:
         if not self._article_log:
-            return None
+            return []
         return [LogEntry.from_dict(entry) for entry in deepcopy(self._article_log["entries"])]
 
     @property
-    def created_at(self) -> datetime | None:
-        return self._meta.created_at
+    def created_at(self) -> datetime:
+        return self._meta.created_at or never()
     
     @property
-    def updated_at(self) -> datetime | None:
-        return self._meta.updated_at
+    def updated_at(self) -> datetime:
+        return self._meta.updated_at or never()
 
     @cached_property
-    def author(self) -> User | None:
-        return self._meta.author
+    def author(self) -> User:
+        return self._meta.author or SYSTEM_USER
 
     @property
-    def votes(self) -> List[Vote] | None:
+    def votes(self) -> List[Vote]:
         if not self._votes_info:
-            return None
+            return []
         return [Vote.from_dict(vote) for vote in self._votes_info["votes"]]
     
     @property
-    def votes_count(self) -> int | None:
-        return self._meta.votes_count
+    def votes_count(self) -> int:
+        return self._meta.votes_count or -1
     
     @property
-    def rating(self) -> float | None:
-        return self._meta.rating
+    def rating(self) -> float:
+        return self._meta.rating or float('-inf')
 
     @property
-    def popularity(self) -> int | None:
-        return self._meta.popularity
+    def popularity(self) -> int:
+        return self._meta.popularity or -1
     
     async def is_exists(self):
         return await self.wiki.is_page_exists(self.page_id)
@@ -247,7 +249,7 @@ class Page:
             
         return self.history[-1]
     
-    async def get_last_source_edit(self, lazy: bool=True) -> LogEntry | None:
+    async def get_last_source_edit(self, lazy: bool=True) -> LogEntry:
         await lazy_async(lazy, self.history is None, self.get_change_log)
 
         edits = await self.filter_history([LogEntryType.Source, LogEntryType.New])
@@ -267,17 +269,17 @@ class Page:
             
         return None
     
-    async def set_tags(self, tags: List[str]):
+    async def set_tags(self, tags: Iterable[str]):
         return await self.update_data({"tags": tags})
     
-    async def add_tags(self, tags: List[str], lazy: bool=True):
+    async def add_tags(self, tags: Iterable[str], lazy: bool=True):
         await lazy_async(lazy, self.tags is None, self.get_page_data)
 
         new_tags = self.tags
         new_tags.extend(map(normalize_tag, tags))
         return await self.set_tags(list(set(new_tags)))
     
-    async def remove_tags(self, tags: List[str], lazy: bool=True) -> List[str]:
+    async def remove_tags(self, tags: Iterable[str], lazy: bool=True) -> List[str]:
         await lazy_async(lazy, self.tags is None, self.get_page_data)
 
         new_tags = self.tags
@@ -291,7 +293,7 @@ class Page:
         await self.set_tags(new_tags)
         return removed_tags
 
-    async def update_tags(self, add_tags: List[str]=None, remove_tags: List[str]=None, lazy: bool=True):
+    async def update_tags(self, add_tags: Optional[List[str]]=None, remove_tags: Optional[List[str]]=None, lazy: bool=True):
         await lazy_async(lazy, self.tags is None, self.get_page_data)
 
         new_tags = self.tags
@@ -340,11 +342,11 @@ class ForumThread:
 
 
 class Wiki:
-    def __init__(self, wiki_base: str, token: str=None):
+    def __init__(self, wiki_base: str, token: Optional[str]=None):
         self.wiki_base = URL(wiki_base)
         self.token = token
         self._logger = logging.getLogger()
-        self._session: ClientSession = None
+        self._session: ClientSession
         self._api_url = URL("/api/")
         self.is_api_initialized = False
 

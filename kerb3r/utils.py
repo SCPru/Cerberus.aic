@@ -22,11 +22,11 @@ def normalize_tag(tag: str) -> str:
             return tag[9:]
         return tag
     
-def include_tags(tags: List[str]):
-    return list(map(lambda t: f"+{t.replace("+", "").replace("-", "")}", tags))
+def include_tags_or_category(objs: List[str]):
+    return list(map(lambda o: f"+{o.replace("+", "").replace("-", "")}", objs))
 
-def exclude_tags(tags: List[str]):
-    return list(map(lambda t: f"-{t.replace("+", "").replace("-", "")}", tags))
+def exclude_tags_or_category(objs: List[str]):
+    return list(map(lambda o: f"-{o.replace("+", "").replace("-", "")}", objs))
 
 def now(tz: timezone=timezone.utc) -> datetime:
     return datetime.now(tz)
