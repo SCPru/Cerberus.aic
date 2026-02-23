@@ -192,16 +192,16 @@ class Page:
         return [Vote.from_dict(vote) for vote in self._votes_info["votes"]]
     
     @property
-    def votes_count(self) -> int:
-        return self._meta.votes_count or -1
+    def votes_count(self) -> int | None:
+        return self._meta.votes_count
     
     @property
-    def rating(self) -> float:
-        return self._meta.rating or float('-inf')
+    def rating(self) -> float | None:
+        return self._meta.rating
 
     @property
-    def popularity(self) -> int:
-        return self._meta.popularity or -1
+    def popularity(self) -> int | None:
+        return self._meta.popularity
     
     async def is_exists(self):
         return await self.wiki.is_page_exists(self.page_id)
@@ -362,6 +362,9 @@ class Wiki:
     async def api(self, endpoint: Endpoint | Route, raw: bool=False, *args, **kwargs) -> Any:
         if not self.is_api_initialized:
             await self._init_api()
+            
+        if self._session is None:
+            raise ValueError("No active wiki sessiion")
 
         if isinstance(endpoint, Endpoint) :
             route = endpoint.value
