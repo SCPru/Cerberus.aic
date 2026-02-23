@@ -33,17 +33,19 @@ def get_random_deletion_phrase():
     return phrase.format(
         next_day=(now() + timedelta(days=1)).strftime("%d.%m.%Y"),
     )
-    
-    
+
+
 async def is_in_grayzone(page: Page) -> bool:
     if page.rating > config("critical.rating") and page.popularity < config("critical.popularity"):
         last_category_move = await page.get_last_category_move()
         if now() - last_category_move.createdAt >= extract_period(config("grayzone.delay")):
             return True
     return False
-    
+
+
 async def is_in_progress_expired(page: Page) -> bool:
     return now() - (await page.get_last_source_edit()).createdAt >= extract_period(config("in_progress.delay"))
+
 
 async def is_last_chance_expired(page: Page) -> bool:
     tag_date = await page.get_tag_date(config("tags.deletion"))
@@ -51,11 +53,14 @@ async def is_last_chance_expired(page: Page) -> bool:
         return now() - tag_date >= extract_period(config("critical.delay"))
     return False
 
+
 def is_critical_rating_reached(page: Page) -> bool:
     return page.rating < config("critical.rating") and page.votes_count >= config("critical.votes")
 
+
 def is_approval_rating_reached(page: Page) -> bool:
     return page.votes_count >= config("approval.votes") and page.popularity >= config("approval.popularity") and page.rating >= config("approval.rating")
+
 
 async def is_ready_for_approval(page: Page) -> bool:
     if is_approval_rating_reached(page):
@@ -64,6 +69,7 @@ async def is_ready_for_approval(page: Page) -> bool:
             return now() - tag_date >= extract_period(config("approval.delay"))
         return False
     return False
+
 
 # global_last_pages_registry_update = never()
 # global_pages_registry = []
@@ -82,7 +88,8 @@ async def is_ready_for_approval(page: Page) -> bool:
 # async def get_pages(categories: List[str]=[], tags: List[str]=[]):
 #     pages = await get_all_pages_lazy(timedelta(minutes=WORKING_PERIOD_MINUTES))
 #     return await Wiki.filter_pages(pages, categories, tags)
-    
+
+
 @bot.on_startup()
 async def on_startup():
     logger.info(f"Запускаю {config("name")} v{config("version")}")
@@ -93,9 +100,11 @@ async def on_startup():
         logger.error("Не удалось загрузить токен авторизации")
         bot.stop()
 
+
 @bot.on_shutdown()
 async def on_shutdown():
     logger.warning(f"Cerberus.aic v{config("version")} завершает работу")
+
 
 @bot.task(period=extract_period(config("runtime.work_period")))
 async def mark_for():
@@ -138,6 +147,7 @@ async def mark_for():
             )
             logger.info(f"На странице обсуждения {page.name} оставлено сообщение: {deletion_phrase}")
 
+
 @bot.task(period=extract_period(config("runtime.deletion_period")))
 async def delete_marked():
     target_pages = await bot.list_pages(
@@ -174,6 +184,7 @@ async def delete_marked():
             source=deletion_message
         )
 
+
 @bot.task(period=extract_period(config("runtime.work_period")))
 async def approve_marked():
     target_pages = await bot.list_pages(
@@ -193,6 +204,7 @@ async def approve_marked():
         elif not is_approval_rating_reached(page):
             await page.remove_tags([config("tags.whitemark")])
             logger.info(f"Проходной рейтинг утрачен: {page}")
+
 
 @bot.task(period=extract_period(config("runtime.work_period")))
 async def handle_in_progress_articles():
@@ -220,3 +232,32 @@ async def handle_in_progress_articles():
             if unwanted_tags.intersection(page.tags or []):
                 removed_tags = await page.remove_tags(unwanted_tags)
                 logger.info(f"Удалены теги полигона для статьи в работе: {page.name} {removed_tags}")
+
+
+@bot.task(period=extract_period(config("runtime.work_period")))
+async def untag_categories():
+    all_pages = await bot.list_pages(
+        category=" ".join(config("tags.untagging.categories")),
+        tags=" ".join(exclude_tags_or_category(config("tags.exclude_with")) + exclude_tags_or_category(config("tags.untagging.exclude_with")))
+    )
+    no_tags_pages = await bot.list_pages(
+        category=" ".join(config("tags.untagging.categories")),
+        tags="-"
+    )
+
+    logger.info(f"{list(no_tags_pages)}")
+
+    no_tags_page_ids = set([page.name for page in no_tags_pages])
+    target_pages = [page for page in all_pages if page.name not in no_tags_page_ids]
+
+    for page in target_pages:
+        await page.fetch()
+        removed_tags = page.tags
+        await page.set_tags({})
+
+        thread = await page.get_thread()
+        await thread.new_post(
+            title=config("posting.title"),
+            source=config("posting.phrases.tags_prohibited")
+        )
+        logger.info(f"Со статьи {page.name} ({page.title}) удалены все теги: {removed_tags}")
