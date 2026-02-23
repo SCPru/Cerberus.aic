@@ -346,7 +346,7 @@ class Wiki:
         self.wiki_base = URL(wiki_base)
         self.token = token
         self._logger = logging.getLogger()
-        self._session: ClientSession
+        self._session: Optional[ClientSession] = None
         self._api_url = URL("/api/")
         self.is_api_initialized = False
 

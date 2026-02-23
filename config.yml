@@ -28,6 +28,8 @@ grayzone:
     days: 30
 
 in_progress:
+  categories:
+    - wip
   delay:
     days: 30
 
