@@ -252,8 +252,8 @@ async def untag_categories():
 
     for page in target_pages:
         await page.fetch()
-        removed_tags = page.tags
-        await page.set_tags({})
+        removed_tags = set(page.tags) - {config("tags.untagging.exclude_with")}
+        await page.remove_tags(removed_tags, lazy=False)
 
         thread = await page.get_thread()
         await thread.new_post(
